@@ -639,6 +639,24 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
 }
 
 /**
+ *
+ * Category: Text
+ * @param {*} text Text string to split. If empty value is provided (undefined, null, ''), throw #VALUE error
+ * @param {*} col_delimiter Represents text as column string delimiter.
+ * @returns
+ */
+export function TEXTSPLIT(text, col_delimiter) {
+  if (typeof text === 'undefined')
+    return error.value
+
+  if (text === null)
+    return error.value
+
+  if (text === '')
+    return error.value
+}
+
+/**
  * Removes spaces from text.
  *
  * Category: Text
