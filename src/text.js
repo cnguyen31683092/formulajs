@@ -646,14 +646,9 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  * @returns
  */
 export function TEXTSPLIT(text, col_delimiter) {
-  if (typeof text === 'undefined')
+  if (!utils.isDefined(text) || text === '') {
     return error.value
-
-  if (text === null)
-    return error.value
-
-  if (text === '')
-    return error.value
+  }
 }
 
 /**
