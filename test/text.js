@@ -340,6 +340,14 @@ describe('Text', () => {
     expect(text.TEXTJOIN(' ', true)).to.equal(error.na)
   })
 
+  describe('TEXTSPLIT', () => {
+    it('should throw value error when empty text parameter as first argument', () => {
+      expect(text.TEXTSPLIT(undefined, ' ')).to.equal(error.value)
+      expect(text.TEXTSPLIT(null, ' ')).to.equal(error.value)
+      expect(text.TEXTSPLIT('', ' ')).to.equal(error.value)
+    })
+  })
+
   it('TRIM', () => {
     expect(text.TRIM(undefined)).to.equal('')
     expect(text.TRIM(error.na)).to.equal(error.na)
