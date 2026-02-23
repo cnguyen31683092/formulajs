@@ -346,6 +346,12 @@ describe('Text', () => {
       expect(text.TEXTSPLIT(null, ' ')).to.equal(error.value)
       expect(text.TEXTSPLIT('', ' ')).to.equal(error.value)
     })
+
+    it('should throw value error when empty col_delimiter as second argument', () => {
+      expect(text.TEXTSPLIT('My text', undefined)).to.equal(error.value)
+      expect(text.TEXTSPLIT('My text', null)).to.equal(error.value)
+      expect(text.TEXTSPLIT('My text', '')).to.equal(error.value)
+    })
   })
 
   it('TRIM', () => {
