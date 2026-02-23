@@ -642,11 +642,15 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  *
  * Category: Text
  * @param {*} text Text string to split. If empty value is provided (undefined, null, ''), throw #VALUE error
- * @param {*} col_delimiter Represents text as column string delimiter.
+ * @param {*} col_delimiter Represents text as column string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @returns
  */
 export function TEXTSPLIT(text, col_delimiter) {
   if (!utils.isDefined(text) || text === '') {
+    return error.value
+  }
+
+  if (!utils.isDefined(col_delimiter) || col_delimiter === '') {
     return error.value
   }
 }
