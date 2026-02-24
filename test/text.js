@@ -352,6 +352,18 @@ describe('Text', () => {
       expect(text.TEXTSPLIT('My text', null)).to.equal(error.value)
       expect(text.TEXTSPLIT('My text', '')).to.equal(error.value)
     })
+
+    it('should split with col_delimiter', () => {
+      expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', '.')).to.deep.equal(
+        [['Do', ' Or do not', ' There is no try', ' -Anonymous']]
+      )
+      expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', ' ')).to.deep.equal(
+        [['Do.', 'Or', 'do', 'not.', 'There', 'is', 'no', 'try.', '-Anonymous']]
+      )
+      expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', '. ')).to.deep.equal(
+        [['Do', 'Or do not', 'There is no try', '-Anonymous']]
+      )
+    })
   })
 
   it('TRIM', () => {
