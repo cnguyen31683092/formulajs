@@ -653,6 +653,8 @@ export function TEXTSPLIT(text, col_delimiter) {
   if (utils.isEmptyString(col_delimiter)) {
     return error.value
   }
+
+  return [ text.split(col_delimiter) ]
 }
 
 /**
