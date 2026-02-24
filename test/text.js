@@ -363,6 +363,13 @@ describe('Text', () => {
       expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', '. ')).to.deep.equal(
         [['Do', 'Or do not', 'There is no try', '-Anonymous']]
       )
+
+      expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', ['.', ' '])).to.deep.equal(
+        [['Do', '', 'Or', 'do', 'not', '', 'There', 'is', 'no', 'try', '', '-Anonymous']]
+      )
+      expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', ['.', ' ', 'Do'])).to.deep.equal(
+        [['', '', '', 'Or', 'do', 'not', '', 'There', 'is', 'no', 'try', '', '-Anonymous']]
+      )
     })
   })
 
