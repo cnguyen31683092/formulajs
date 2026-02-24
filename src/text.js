@@ -1,7 +1,6 @@
 import * as error from './utils/error.js'
 import * as utils from './utils/common.js'
 import { ROUND } from './math-trig.js'
-import { util } from 'chai'
 
 /**
  * Returns the character specified by the code number.
