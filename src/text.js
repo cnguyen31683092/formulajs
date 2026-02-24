@@ -646,11 +646,11 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  * @returns
  */
 export function TEXTSPLIT(text, col_delimiter) {
-  if (!utils.isDefined(text) || text === '') {
+  if (utils.isEmptyString(text)) {
     return error.value
   }
 
-  if (!utils.isDefined(col_delimiter) || col_delimiter === '') {
+  if (utils.isEmptyString(col_delimiter)) {
     return error.value
   }
 }

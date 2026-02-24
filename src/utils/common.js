@@ -392,6 +392,11 @@ export function anyIsString() {
   return false
 }
 
+export function isEmptyString(arg) {
+  return !isDefined(arg)
+      || (arg === '')
+}
+
 // Misc
 //Filters values from a given range based on multiple criteria.
 //Returns an array containing the values that satisfy all the specified criteria.

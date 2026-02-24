@@ -361,6 +361,13 @@ describe('Utils => Common', () => {
       expect(utils.anyIsString(1, '')).to.be.true
       expect(utils.anyIsString(1, 'text')).to.be.true
     })
+
+    it('isEmptyString', () => {
+      expect(utils.isEmptyString(undefined)).to.be.true
+      expect(utils.isEmptyString(null)).to.be.true
+      expect(utils.isEmptyString('')).to.be.true
+      expect(utils.isEmptyString('non empty')).to.be.false
+    })
   })
 
   describe('numbers', () => {
