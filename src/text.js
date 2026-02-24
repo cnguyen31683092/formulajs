@@ -1,6 +1,7 @@
 import * as error from './utils/error.js'
 import * as utils from './utils/common.js'
 import { ROUND } from './math-trig.js'
+import { util } from 'chai'
 
 /**
  * Returns the character specified by the code number.
@@ -654,7 +655,23 @@ export function TEXTSPLIT(text, col_delimiter) {
     return error.value
   }
 
-  return [ text.split(col_delimiter) ]
+  if (Array.isArray(col_delimiter)) {
+    const col_delimiters = col_delimiter.map(
+      delimiter => !utils.isDefined(delimiter)
+                 ? ''
+                 : delimiter
+    )
+
+    const escaped = col_delimiters
+      .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
+      .sort((a, b) => b.length - a.length)
+
+    const regex = new RegExp(escaped.join('|'), 'g')
+
+    return [text.split(regex)]
+  }
+
+  return [text.split(col_delimiter)]
 }
 
 /**
