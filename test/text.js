@@ -371,6 +371,14 @@ describe('Text', () => {
         [['', '', '', 'Or', 'do', 'not', '', 'There', 'is', 'no', 'try', '', '-Anonymous']]
       )
     })
+
+    describe('with row_delimiter', () => {
+      it('should throw value error when empty string', () => {
+        expect(text.TEXTSPLIT('My text', null, '')).to.equal(error.value)
+        expect(text.TEXTSPLIT('My text', null, undefined)).to.equal(error.value)
+        expect(text.TEXTSPLIT('My text', null, null)).to.equal(error.value)
+      })
+    })
   })
 
   it('TRIM', () => {
