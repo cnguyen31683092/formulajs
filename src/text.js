@@ -645,12 +645,12 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  * @param {*} col_delimiter Represents text as column string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @returns
  */
-export function TEXTSPLIT(text, col_delimiter) {
+export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
   if (utils.isEmptyString(text)) {
     return error.value
   }
 
-  if (utils.isEmptyString(col_delimiter)) {
+  if (utils.isEmptyString(col_delimiter) && utils.isEmptyString(row_delimiter)) {
     return error.value
   }
 
