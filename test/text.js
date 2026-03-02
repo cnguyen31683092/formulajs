@@ -445,6 +445,15 @@ describe('Text', () => {
         )
       })
     })
+
+    describe('with col_delimiter and row_delimiter', () => {
+      it('should throw value error when at least one empty string provided for col or row delimiter', () => {
+        expect(text.TEXTSPLIT('My text', ' ', '')).to.equal(error.value)
+        expect(text.TEXTSPLIT('My text', '', ' ')).to.equal(error.value)
+        expect(text.TEXTSPLIT('My text', [ 'text', '' ], 'My')).to.equal(error.value)
+        expect(text.TEXTSPLIT('My text', [ ' ', 'text' ], [ 'My', '' ])).to.equal(error.value)
+      })
+    })
   })
 
   it('TRIM', () => {
