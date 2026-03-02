@@ -378,6 +378,72 @@ describe('Text', () => {
         expect(text.TEXTSPLIT('My text', null, undefined)).to.equal(error.value)
         expect(text.TEXTSPLIT('My text', null, null)).to.equal(error.value)
       })
+
+      it('should split as multiple rows', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', null, '.')).to.deep.equal(
+          [
+            ['Do'],
+            [' Or do not'],
+            [' There is no try'],
+            [' -Anonymous']
+          ]
+        )
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', null, ' ')).to.deep.equal(
+          [
+            ['Do.'],
+            ['Or'],
+            ['do'],
+            ['not.'],
+            ['There'],
+            ['is'],
+            ['no'],
+            ['try.'],
+            ['-Anonymous']
+          ]
+        )
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', null, '. ')).to.deep.equal(
+          [
+            ['Do'],
+            ['Or do not'],
+            ['There is no try'],
+            ['-Anonymous']
+          ]
+        )
+
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', null, ['.', ' '])).to.deep.equal(
+          [
+            ['Do'],
+            [''],
+            ['Or'],
+            ['do'],
+            ['not'],
+            [''],
+            ['There'],
+            ['is'],
+            ['no'],
+            ['try'],
+            [''],
+            ['-Anonymous']
+          ]
+        )
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', null, ['.', ' ', 'Do'])).to.deep.equal(
+          [
+            [''],
+            [''], 
+            [''], 
+            ['Or'], 
+            ['do'], 
+            ['not'], 
+            [''], 
+            ['There'],
+            ['is'],
+            ['no'],
+            ['try'], 
+            [''], 
+            ['-Anonymous']
+          ]
+        )
+      })
     })
   })
 
