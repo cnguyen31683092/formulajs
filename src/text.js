@@ -652,43 +652,38 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
 
   if (utils.isEmptyString(col_delimiter) && utils.isEmptyString(row_delimiter)) {
     return error.value
-  } else if (!utils.isEmptyString(col_delimiter)) {
-    if (Array.isArray(col_delimiter)) {
-      const col_delimiters = col_delimiter.map(
+  } else {
+    const sanitizeDelimiters = (delimiters) => {
+      return delimiters.map(
         delimiter => !utils.isDefined(delimiter)
-                  ? ''
-                  : delimiter
+                   ? ''
+                   : delimiter
       )
+    }
 
-      const escaped = col_delimiters
+    const createRegex = (delimiters) => {
+      const sanitized = sanitizeDelimiters(delimiters)
+
+      const escaped = sanitized
         .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
         .sort((a, b) => b.length - a.length)
 
-      const regex = new RegExp(escaped.join('|'), 'g')
+      return new RegExp(escaped.join('|'), 'g')
+    }
 
+    if (!utils.isEmptyString(col_delimiter)) {
+      if (!Array.isArray(col_delimiter))
+        col_delimiter = [ col_delimiter ]
+
+      const regex = createRegex(col_delimiter)
       return [text.split(regex)]
+    } else if (!utils.isEmptyString(row_delimiter)) {
+      if (!Array.isArray(row_delimiter))
+        row_delimiter = [ row_delimiter ]
+
+      const regex = createRegex(row_delimiter)
+      return text.split(regex).map(value => [ value ?? '' ])
     }
-
-    return [text.split(col_delimiter)]
-  } else if (!utils.isEmptyString(row_delimiter)) {
-    if (Array.isArray(row_delimiter)) {
-      const row_delimiters = row_delimiter.map(
-        delimiter => !utils.isDefined(delimiter)
-                  ? ''
-                  : delimiter
-      )
-
-      const escaped = row_delimiters
-        .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
-        .sort((a, b) => b.length - a.length)
-
-      const regex = new RegExp(escaped.join('|'), 'g')
-
-      const splitted = text.split(regex).map(value => [ value ?? '' ])
-      return splitted
-    }
-
-    return text.split(row_delimiter).map(value => [ value ?? '' ])
   }
   
 }
