@@ -671,8 +671,25 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
 
       return new RegExp(escaped.join('|'), 'g')
     }
+    
+    if (utils.isDefined(col_delimiter) && utils.isDefined(row_delimiter)) {
+      const delimiters = []
 
-    if (!utils.isEmptyString(col_delimiter)) {
+      if (!Array.isArray(col_delimiter)) {
+        delimiters.push(col_delimiter)
+      } else {
+        delimiters.push(...col_delimiter)
+      }
+
+      if (!Array.isArray(row_delimiter)) {
+        delimiters.push(row_delimiter)
+      } else {
+        delimiters.push(...row_delimiter)
+      }
+
+      if (delimiters.some(delimiter => utils.isEmptyString(delimiter)))
+        return error.value
+    } else if (!utils.isEmptyString(col_delimiter)) {
       if (!Array.isArray(col_delimiter))
         col_delimiter = [ col_delimiter ]
 
