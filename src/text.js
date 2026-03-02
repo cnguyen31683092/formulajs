@@ -641,8 +641,9 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
 /**
  *
  * Category: Text
- * @param {*} text Text string to split. If empty value is provided (undefined, null, ''), throw #VALUE error
- * @param {*} col_delimiter Represents text as column string delimiter. If empty (undefined, null, ''), throw #VALUE error
+ * @param {*} text Required. Text string to split. If empty value is provided (undefined, null, ''), throw #VALUE error
+ * @param {*} col_delimiter Required if no row_delimiter defined, optionnal else. Represents text as column string delimiter. If empty (undefined, null, ''), throw #VALUE error
+ * @param {*} row_delimiter Required if no col_delimiter defined, optionnal else. Represents text as row string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @returns
  */
 export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
