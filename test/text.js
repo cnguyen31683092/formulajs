@@ -453,6 +453,17 @@ describe('Text', () => {
         expect(text.TEXTSPLIT('My text', [ 'text', '' ], 'My')).to.equal(error.value)
         expect(text.TEXTSPLIT('My text', [ ' ', 'text' ], [ 'My', '' ])).to.equal(error.value)
       })
+
+      it('should split with simple string delimiter for both', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', ' ', '.')).to.deep.equal(
+          [
+            [ 'Do', error.na, error.na, error.na, error.na ],
+            [ '', 'Or', 'do', 'not', error.na ],
+            [ '', 'There', 'is', 'no', 'try' ],
+            [ '', '-Anonymous', error.na, error.na, error.na ],
+          ]
+        )
+      })
     })
   })
 
