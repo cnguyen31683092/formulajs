@@ -652,25 +652,45 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
 
   if (utils.isEmptyString(col_delimiter) && utils.isEmptyString(row_delimiter)) {
     return error.value
+  } else if (!utils.isEmptyString(col_delimiter)) {
+    if (Array.isArray(col_delimiter)) {
+      const col_delimiters = col_delimiter.map(
+        delimiter => !utils.isDefined(delimiter)
+                  ? ''
+                  : delimiter
+      )
+
+      const escaped = col_delimiters
+        .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
+        .sort((a, b) => b.length - a.length)
+
+      const regex = new RegExp(escaped.join('|'), 'g')
+
+      return [text.split(regex)]
+    }
+
+    return [text.split(col_delimiter)]
+  } else if (!utils.isEmptyString(row_delimiter)) {
+    if (Array.isArray(row_delimiter)) {
+      const row_delimiters = row_delimiter.map(
+        delimiter => !utils.isDefined(delimiter)
+                  ? ''
+                  : delimiter
+      )
+
+      const escaped = row_delimiters
+        .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
+        .sort((a, b) => b.length - a.length)
+
+      const regex = new RegExp(escaped.join('|'), 'g')
+
+      const splitted = text.split(regex).map(value => [ value ?? '' ])
+      return splitted
+    }
+
+    return text.split(row_delimiter).map(value => [ value ?? '' ])
   }
-
-  if (Array.isArray(col_delimiter)) {
-    const col_delimiters = col_delimiter.map(
-      delimiter => !utils.isDefined(delimiter)
-                 ? ''
-                 : delimiter
-    )
-
-    const escaped = col_delimiters
-      .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
-      .sort((a, b) => b.length - a.length)
-
-    const regex = new RegExp(escaped.join('|'), 'g')
-
-    return [text.split(regex)]
-  }
-
-  return [text.split(col_delimiter)]
+  
 }
 
 /**
