@@ -106,6 +106,23 @@ describe('Utils => Common', () => {
       })
     })
 
+    describe('arrayPadEnd', () => {
+      it('should throw error if undefined / null or not array provided', () => {
+        expect(utils.arrayPadEnd(undefined, 'fill_value', 2)).to.equal(error.value)
+        expect(utils.arrayPadEnd(null, 'fill_value', 5)).to.equal(error.value)
+      })
+
+      it('should fill empty or existing array with given fillValue and targetLength', () => {
+        expect(utils.arrayPadEnd([ 1, 'ITEM_2', false ], 'fill_value', 5)).to.eql([ 1, 'ITEM_2', false, 'fill_value', 'fill_value' ])
+        expect(utils.arrayPadEnd([], 'fill_value', 4)).to.eql([ 'fill_value', 'fill_value', 'fill_value', 'fill_value' ])
+      })
+
+      it('should simply return provided array if targetLength <= array.length', () => {
+        expect(utils.arrayPadEnd([ 1, 'ITEM_2', false ], 'fill_value', 2)).to.eql([ 1, 'ITEM_2', false ])
+        expect(utils.arrayPadEnd([ 1, 'ITEM_2', false ], 'fill_value', 3)).to.eql([ 1, 'ITEM_2', false ])
+      })
+    })
+
     describe('flatten', () => {
       describe('with direct arguments', () => {
         it('should merge and flatten arguments', () => {

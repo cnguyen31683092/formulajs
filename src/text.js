@@ -718,14 +718,8 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
     result.push(currentRow)
   }
 
-  {
-    for (let iRow = 0; iRow < result.length; iRow++) {
-      if (result[iRow].length < colMax) {
-        const lengthBeforeChange = result[iRow].length
-        result[iRow].length = colMax
-        result[iRow].fill(error.na, lengthBeforeChange, colMax)
-      }
-    }
+  for (let row of result) {
+    row = utils.arrayPadEnd(row, error.na, colMax)
   }
 
   return result

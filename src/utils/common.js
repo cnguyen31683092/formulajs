@@ -26,6 +26,19 @@ export function arrayEach(array, iteratee) {
   return array
 }
 
+export function arrayPadEnd(array, fillValue, targetLength) {
+  if (!Array.isArray(array))
+    return error.value
+
+  const lastLength = array.length
+  if (targetLength > lastLength) {
+    array.length = targetLength
+    array.fill(fillValue, lastLength, targetLength)
+  }
+
+  return array
+}
+
 export function arrayValuesToNumbers(arr) {
   let n = arr.length
   let el
