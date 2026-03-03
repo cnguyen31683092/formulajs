@@ -674,6 +674,7 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
     
     if (utils.isDefined(col_delimiter) && utils.isDefined(row_delimiter)) {
       const delimiters = []
+      const row_delimiters = []
 
       if (!Array.isArray(col_delimiter)) {
         delimiters.push(col_delimiter)
@@ -683,12 +684,54 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
 
       if (!Array.isArray(row_delimiter)) {
         delimiters.push(row_delimiter)
+        row_delimiters.push(row_delimiter)
       } else {
         delimiters.push(...row_delimiter)
+        row_delimiters.push(...row_delimiter)
       }
 
       if (delimiters.some(delimiter => utils.isEmptyString(delimiter)))
         return error.value
+
+      const result = []
+      let colMax = 0
+      { // split !
+        const regex = createRegex(delimiters)
+        let currentRow = []
+        let currentMatch
+        let lastIndex = 0
+        do {
+          currentMatch = regex.exec(text)
+          if (currentMatch !== null) {
+            const matchedPattern = currentMatch[0]
+            const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - 1)
+            currentRow.push(textBeforeMatch)
+            if (row_delimiters.includes(matchedPattern)) {
+              result.push(currentRow)
+              colMax = Math.max(colMax, currentRow.length)
+              currentRow = []
+            }
+
+            lastIndex = regex.lastIndex
+          }
+        } while (currentMatch !== null)
+
+        if (lastIndex < text.length)
+          currentRow.push(text.slice(lastIndex, text.length))
+        result.push(currentRow)
+      }
+
+      { // pad result lines with error.na
+        for (let iRow = 0; iRow < result.length; iRow++) {
+          if (result[iRow].length < colMax) {
+            const lengthBeforeChange = result[iRow].length
+            result[iRow].length = colMax
+            result[iRow].fill(error.na, lengthBeforeChange, colMax)
+          }
+        }
+      }
+
+      return result
     } else if (!utils.isEmptyString(col_delimiter)) {
       if (!Array.isArray(col_delimiter))
         col_delimiter = [ col_delimiter ]
