@@ -651,102 +651,84 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
     return error.value
   }
 
-  if (utils.isEmptyString(col_delimiter) && utils.isEmptyString(row_delimiter)) {
+  const delimiters = []
+  const row_delimiters = []
+
+  if (utils.isDefined(col_delimiter)) {
+    delimiters.push(
+      ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
+    )
+  }
+
+  if (utils.isDefined(row_delimiter)) {
+    delimiters.push(
+      ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
+    )
+    row_delimiters.push(
+      ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
+    )
+  }
+
+  if (!delimiters.length || delimiters.some(delimiter => utils.isEmptyString(delimiter)))
     return error.value
-  } else {
-    const sanitizeDelimiters = (delimiters) => {
-      return delimiters.map(
-        delimiter => !utils.isDefined(delimiter)
-                   ? ''
-                   : delimiter
-      )
-    }
 
-    const createRegex = (delimiters) => {
-      const sanitized = sanitizeDelimiters(delimiters)
+  const sanitizeDelimiters = (delimiters) => {
+    return delimiters.map(
+      delimiter => !utils.isDefined(delimiter)
+      ? ''
+      : delimiter
+    )
+  }
 
-      const escaped = sanitized
-        .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
-        .sort((a, b) => b.length - a.length)
-
-      return new RegExp(escaped.join('|'), 'g')
-    }
+  const createRegex = (delimiters) => {
+    const sanitized = sanitizeDelimiters(delimiters)
     
-    if (utils.isDefined(col_delimiter) && utils.isDefined(row_delimiter)) {
-      const delimiters = []
-      const row_delimiters = []
+    const escaped = sanitized
+    .map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length)
+    
+    return new RegExp(escaped.join('|'), 'g')
+  }
 
-      if (!Array.isArray(col_delimiter)) {
-        delimiters.push(col_delimiter)
-      } else {
-        delimiters.push(...col_delimiter)
-      }
-
-      if (!Array.isArray(row_delimiter)) {
-        delimiters.push(row_delimiter)
-        row_delimiters.push(row_delimiter)
-      } else {
-        delimiters.push(...row_delimiter)
-        row_delimiters.push(...row_delimiter)
-      }
-
-      if (delimiters.some(delimiter => utils.isEmptyString(delimiter)))
-        return error.value
-
-      const result = []
-      let colMax = 0
-      { // split !
-        const regex = createRegex(delimiters)
-        let currentRow = []
-        let currentMatch
-        let lastIndex = 0
-        do {
-          currentMatch = regex.exec(text)
-          if (currentMatch !== null) {
-            const matchedPattern = currentMatch[0]
-            const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - 1)
-            currentRow.push(textBeforeMatch)
-            if (row_delimiters.includes(matchedPattern)) {
-              result.push(currentRow)
-              colMax = Math.max(colMax, currentRow.length)
-              currentRow = []
-            }
-
-            lastIndex = regex.lastIndex
-          }
-        } while (currentMatch !== null)
-
-        if (lastIndex < text.length)
-          currentRow.push(text.slice(lastIndex, text.length))
-        result.push(currentRow)
-      }
-
-      { // pad result lines with error.na
-        for (let iRow = 0; iRow < result.length; iRow++) {
-          if (result[iRow].length < colMax) {
-            const lengthBeforeChange = result[iRow].length
-            result[iRow].length = colMax
-            result[iRow].fill(error.na, lengthBeforeChange, colMax)
-          }
+  const result = []
+  let colMax = 0
+  {
+    const regex = createRegex(delimiters)
+    let currentRow = []
+    let currentMatch
+    let lastIndex = 0
+    do {
+      currentMatch = regex.exec(text)
+      if (currentMatch !== null) {
+        const matchedPattern = currentMatch[0]
+        const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - matchedPattern.length)
+        currentRow.push(textBeforeMatch)
+        if (row_delimiters.includes(matchedPattern)) {
+          result.push(currentRow)
+          colMax = Math.max(colMax, currentRow.length)
+          currentRow = []
         }
+        
+        lastIndex = regex.lastIndex
       }
+    } while (currentMatch !== null)
+      
+    if (lastIndex < text.length)
+      currentRow.push(text.slice(lastIndex, text.length))
+    result.push(currentRow)
+  }
 
-      return result
-    } else if (!utils.isEmptyString(col_delimiter)) {
-      if (!Array.isArray(col_delimiter))
-        col_delimiter = [ col_delimiter ]
-
-      const regex = createRegex(col_delimiter)
-      return [text.split(regex)]
-    } else if (!utils.isEmptyString(row_delimiter)) {
-      if (!Array.isArray(row_delimiter))
-        row_delimiter = [ row_delimiter ]
-
-      const regex = createRegex(row_delimiter)
-      return text.split(regex).map(value => [ value ?? '' ])
+  {
+    for (let iRow = 0; iRow < result.length; iRow++) {
+      if (result[iRow].length < colMax) {
+        const lengthBeforeChange = result[iRow].length
+        result[iRow].length = colMax
+        result[iRow].fill(error.na, lengthBeforeChange, colMax)
+      }
     }
   }
-  
+
+  return result
 }
 
 /**
