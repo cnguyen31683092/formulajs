@@ -653,9 +653,13 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
 
   const delimiters = []
   const row_delimiters = []
+  const col_delimiters = []
 
   if (utils.isDefined(col_delimiter)) {
     delimiters.push(
+      ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
+    )
+    col_delimiters.push(
       ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
     )
   }
@@ -700,7 +704,7 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
         const matchedPattern = currentMatch[0]
         const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - matchedPattern.length)
         currentRow.push(textBeforeMatch)
-        if (row_delimiters.includes(matchedPattern)) {
+        if (row_delimiters.includes(matchedPattern) && !col_delimiters.includes(matchedPattern)) {
           result.push(currentRow)
           colMax = Math.max(colMax, currentRow.length)
           currentRow = []
