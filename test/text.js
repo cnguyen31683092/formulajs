@@ -463,6 +463,19 @@ describe('Text', () => {
             [ '', '-Anonymous', error.na, error.na, error.na ],
           ]
         )
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', '.', ' ')).to.deep.equal(
+          [
+            [ 'Do', '' ],
+            [ 'Or', error.na ],
+            [ 'do', error.na ],
+            [ 'not', '' ],
+            [ 'There', error.na ],
+            [ 'is', error.na ],
+            [ 'no', error.na ],
+            [ 'try', '' ],
+            [ '-Anonymous', error.na ]
+          ]
+        )
       })
     })
   })
