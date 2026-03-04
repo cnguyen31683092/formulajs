@@ -651,26 +651,25 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
     return error.value
   }
 
-  const delimiters = []
-  const col_delimiters = []
-
-  if (utils.isDefined(col_delimiter)) {
-    delimiters.push(
-      ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
-    )
-    col_delimiters.push(
-      ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
-    )
+  if (!utils.isDefined(col_delimiter)) {
+    col_delimiter = []
   }
 
-  if (utils.isDefined(row_delimiter)) {
-    delimiters.push(
-      ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
-    )
+  if (!utils.isDefined(row_delimiter)) {
+    row_delimiter = []
   }
+
+  const delimiters = [
+    ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter),
+    ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
+  ]
 
   if (!delimiters.length || delimiters.some(delimiter => utils.isEmptyString(delimiter)))
     return error.value
+
+  const col_delimiters = [
+    ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
+  ]
 
   const sanitizeDelimiters = (delimiters) => {
     return delimiters.map(
