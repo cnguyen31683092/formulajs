@@ -671,6 +671,10 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
     ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
   ]
 
+  const row_delimiters = [
+    ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
+  ]
+
   const sanitizeDelimiters = (delimiters) => {
     return delimiters.map(
       delimiter => !utils.isDefined(delimiter)
@@ -679,17 +683,21 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
     )
   }
 
-  const createRegex = (delimiters) => {
-    const sanitized = sanitizeDelimiters(delimiters)
-    const escaped = sanitized.map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
+  const createRegex = (col_delimiters, row_delimiters) => {
+    const sanitized_col_delimiters = sanitizeDelimiters(col_delimiters)
+    const sanitized_row_delimiters = sanitizeDelimiters(row_delimiters)
+    const regexReplacement = /[-/\\^$*+?.()|[\]{}]/g
+    const sortByFn = (s1, s2) => s2.length - s1.length
+    const escaped_col_delimiters = sanitized_col_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
+    const escaped_row_delimiters = sanitized_row_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
     
-    return new RegExp(escaped.join('|'), 'g')
+    return new RegExp([ ...escaped_col_delimiters, ...escaped_row_delimiters ].join('|'), 'g')
   }
 
   const result = []
   let colMax = 0
   {
-    const regex = createRegex(delimiters)
+    const regex = createRegex(col_delimiters, row_delimiters)
     let currentRow = []
     let currentMatch
     let lastIndex = 0
