@@ -538,6 +538,17 @@ describe('Text', () => {
         )
       })
     })
+
+    describe('with match_mode', () => {
+      it('should split with default value or explicitly set to 0', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ 'DO', 'do' ], null, true)).to.deep.equal(
+          [[ 'Do. Or ', ' not. There is no try. -Anonymous' ]]
+        )
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ 'DO', 'do' ], null, true, 0)).to.deep.equal(
+          [[ 'Do. Or ', ' not. There is no try. -Anonymous' ]]
+        )
+      })
+    })
   })
 
   it('TRIM', () => {
