@@ -663,7 +663,7 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, matc
     row_delimiter = []
   }
 
-  const col_delimiters = [
+  let col_delimiters = [
     ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
   ].map(delimiter => insensitiveCase ? delimiter.toLocaleUpperCase() : delimiter)
 
@@ -675,50 +675,40 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, matc
   if (!delimiters.length || delimiters.some(delimiter => utils.isEmptyString(delimiter)))
     return error.value
 
-  const createRegex = (col_delimiters, row_delimiters, insensitiveCase) => {
-    const regexReplacement = /[-/\\^$*+?.()|[\]{}]/g
-    const sortByFn = (s1, s2) => s2.length - s1.length
-    const escaped_col_delimiters = col_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
-    const escaped_row_delimiters = row_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
-    
-    const flags = 'g' + (insensitiveCase ? 'i' : '')
-    return new RegExp([ ...escaped_col_delimiters, ...escaped_row_delimiters ].join('|'), flags)
-  }
-
-  const result = []
+  const regexReplacement = /[-/\\^$*+?.()|[\]{}]/g
+  const sortByFn = (s1, s2) => s2.length - s1.length
+  const escaped_col_delimiters = col_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
+  const escaped_row_delimiters = row_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
+  const splitRegex = new RegExp([ ...escaped_col_delimiters, ...escaped_row_delimiters ].join('|'), 'g' + (insensitiveCase ? 'i' : ''))
+  
+  col_delimiters = new Set(col_delimiters)
+  let currentRow = []
+  let currentMatch
+  let lastIndex = 0
   let colMax = 0
-  {
-    const regex = createRegex(col_delimiters, row_delimiters, insensitiveCase)
-    let currentRow = []
-    let currentMatch
-    let lastIndex = 0
-    while ((currentMatch = regex.exec(text)) !== null) {
-      const matchedPattern = (insensitiveCase) ? currentMatch[0].toLocaleUpperCase() : currentMatch[0]
-      const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - matchedPattern.length)
-      if ((!ignore_empty) || (ignore_empty && !utils.isEmptyString(textBeforeMatch))) {
-        currentRow.push(textBeforeMatch)
-        if (!col_delimiters.includes(matchedPattern)) {
-          result.push(currentRow)
-          colMax = Math.max(colMax, currentRow.length)
-          currentRow = []
-        }
+  const result = []
+  while ((currentMatch = splitRegex.exec(text)) !== null) {
+    const matchedPattern = (insensitiveCase) ? currentMatch[0].toLocaleUpperCase() : currentMatch[0]
+    const textBeforeMatch = text.slice(lastIndex, splitRegex.lastIndex - matchedPattern.length)
+    if ((!ignore_empty) || (ignore_empty && !utils.isEmptyString(textBeforeMatch))) {
+      currentRow.push(textBeforeMatch)
+      if (!col_delimiters.has(matchedPattern)) {
+        result.push(currentRow)
+        colMax = Math.max(colMax, currentRow.length)
+        currentRow = []
       }
-      lastIndex = regex.lastIndex
     }
+    lastIndex = splitRegex.lastIndex
+  }
       
-    if (lastIndex < text.length)
-      currentRow.push(text.slice(lastIndex, text.length))
-    else if (!ignore_empty) {
-      currentRow.push('')
-    }
-    result.push(currentRow)
+  if (lastIndex < text.length)
+    currentRow.push(text.slice(lastIndex, text.length))
+  else if (!ignore_empty) {
+    currentRow.push('')
   }
+  result.push(currentRow)
 
-  for (let row of result) {
-    row = utils.arrayPadEnd(row, error.na, colMax)
-  }
-
-  return result
+  return result.map(row => utils.arrayPadEnd(row, error.na, colMax))
 }
 
 /**
