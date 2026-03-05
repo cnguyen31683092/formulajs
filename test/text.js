@@ -507,6 +507,29 @@ describe('Text', () => {
         )
       })
     })
+
+    describe('with ignore_empty', () => {
+      it('should split with default value or explicitly set to false', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ '.', ' ' ], '. ')).to.deep.equal(
+          [
+            [ 'Do', '', 'Or', 'do', 'not', '', 'There', 'is', 'no', 'try', '', '-Anonymous' ]
+          ]
+        )
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ '.', ' ' ], '. ', false)).to.deep.equal(
+          [
+            [ 'Do', '', 'Or', 'do', 'not', '', 'There', 'is', 'no', 'try', '', '-Anonymous' ]
+          ]
+        )
+      })
+
+      it('should split when set to true', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous ', [ '.', ' ' ], '. ', true)).to.deep.equal(
+          [
+            [ 'Do', 'Or', 'do', 'not', 'There', 'is', 'no', 'try', '-Anonymous' ]
+          ]
+        )
+      })
+    })
   })
 
   it('TRIM', () => {
