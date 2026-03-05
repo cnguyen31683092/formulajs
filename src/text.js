@@ -702,32 +702,24 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
     let currentRow = []
     let currentMatch
     let lastIndex = 0
-    do {
-      currentMatch = regex.exec(text)
-      if (currentMatch !== null) {
-        const matchedPattern = currentMatch[0]
-        const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - matchedPattern.length)
-        const include = (!ignore_empty) || (ignore_empty && !utils.isEmptyString(textBeforeMatch)) 
-        if (include) {
-          currentRow.push(textBeforeMatch)
-          if (!col_delimiters.includes(matchedPattern)) {
-            result.push(currentRow)
-            colMax = Math.max(colMax, currentRow.length)
-            currentRow = []
-          }
+    while ((currentMatch = regex.exec(text)) !== null) {
+      const matchedPattern = currentMatch[0]
+      const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - currentMatch[0].length)
+      if ((!ignore_empty) || (ignore_empty && !utils.isEmptyString(textBeforeMatch))) {
+        currentRow.push(textBeforeMatch)
+        if (!col_delimiters.includes(matchedPattern)) {
+          result.push(currentRow)
+          colMax = Math.max(colMax, currentRow.length)
+          currentRow = []
         }
-        
-        lastIndex = regex.lastIndex
       }
-    } while (currentMatch !== null)
+      lastIndex = regex.lastIndex
+    }
       
     if (lastIndex < text.length)
       currentRow.push(text.slice(lastIndex, text.length))
-    else {
-      const include = (!ignore_empty)
-      if (include) {
-        currentRow.push('')
-      }
+    else if (!ignore_empty) {
+      currentRow.push('')
     }
     result.push(currentRow)
   }
