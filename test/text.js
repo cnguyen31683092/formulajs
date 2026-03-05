@@ -548,6 +548,12 @@ describe('Text', () => {
           [[ 'Do. Or ', ' not. There is no try. -Anonymous' ]]
         )
       })
+
+      it('should split with match_mode = 1', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ 'DO', 'do' ], null, false, 1)).to.deep.equal(
+          [[ '', '. Or ', ' not. There is no try. -Anonymous' ]]
+        )
+      })
     })
   })
 
