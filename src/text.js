@@ -660,14 +660,6 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
     row_delimiter = []
   }
 
-  const delimiters = [
-    ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter),
-    ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
-  ]
-
-  if (!delimiters.length || delimiters.some(delimiter => utils.isEmptyString(delimiter)))
-    return error.value
-
   const col_delimiters = [
     ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
   ]
@@ -676,15 +668,15 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
     ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
   ]
 
-  const sanitizeDelimiters = (delimiters) => {
-    return delimiters.map(
-      delimiter => !utils.isDefined(delimiter)
-      ? ''
-      : delimiter
-    )
-  }
+  const delimiters = col_delimiters.concat(row_delimiters)
+  if (!delimiters.length || delimiters.some(delimiter => utils.isEmptyString(delimiter)))
+    return error.value
 
   const createRegex = (col_delimiters, row_delimiters) => {
+    const sanitizeDelimiters = delimiters => delimiters.map(delimiter =>
+      !utils.isDefined(delimiter) ? '' : delimiter
+    )
+    
     const sanitized_col_delimiters = sanitizeDelimiters(col_delimiters)
     const sanitized_row_delimiters = sanitizeDelimiters(row_delimiters)
     const regexReplacement = /[-/\\^$*+?.()|[\]{}]/g
