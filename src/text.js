@@ -645,12 +645,15 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  * @param {*} col_delimiter Required if no row_delimiter defined, optionnal else. Represents text as column string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @param {*} row_delimiter Required if no col_delimiter defined, optionnal else. Represents text as row string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @param {*} ignore_empty Optionnal, Specify TRUE to ignore consecutive delimiters. Defaults to FALSE, which creates an empty cell
+ * @param {*} match_mode Optionnal, Specify 1 to perform a case-insensitive match. Defaults to 0, which does a case-sensitive match
  * @returns
  */
-export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
+export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, match_mode) {
   if (utils.isEmptyString(text)) {
     return error.value
   }
+
+  const insensitiveCase = (match_mode === 1)
 
   if (!utils.isDefined(col_delimiter)) {
     col_delimiter = []
@@ -662,17 +665,17 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
 
   const col_delimiters = [
     ...(!Array.isArray(col_delimiter) ? [ col_delimiter ] : col_delimiter)
-  ]
+  ].map(delimiter => insensitiveCase ? delimiter.toLocaleUpperCase() : delimiter)
 
   const row_delimiters = [
     ...(!Array.isArray(row_delimiter) ? [ row_delimiter ] : row_delimiter)
-  ]
+  ].map(delimiter => insensitiveCase ? delimiter.toLocaleUpperCase() : delimiter)
 
   const delimiters = col_delimiters.concat(row_delimiters)
   if (!delimiters.length || delimiters.some(delimiter => utils.isEmptyString(delimiter)))
     return error.value
 
-  const createRegex = (col_delimiters, row_delimiters) => {
+  const createRegex = (col_delimiters, row_delimiters, insensitiveCase) => {
     const sanitizeDelimiters = delimiters => delimiters.map(delimiter =>
       !utils.isDefined(delimiter) ? '' : delimiter
     )
@@ -684,19 +687,20 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
     const escaped_col_delimiters = sanitized_col_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
     const escaped_row_delimiters = sanitized_row_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
     
-    return new RegExp([ ...escaped_col_delimiters, ...escaped_row_delimiters ].join('|'), 'g')
+    const flags = 'g' + (insensitiveCase ? 'i' : '')
+    return new RegExp([ ...escaped_col_delimiters, ...escaped_row_delimiters ].join('|'), flags)
   }
 
   const result = []
   let colMax = 0
   {
-    const regex = createRegex(col_delimiters, row_delimiters)
+    const regex = createRegex(col_delimiters, row_delimiters, insensitiveCase)
     let currentRow = []
     let currentMatch
     let lastIndex = 0
     while ((currentMatch = regex.exec(text)) !== null) {
-      const matchedPattern = currentMatch[0]
-      const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - currentMatch[0].length)
+      const matchedPattern = (insensitiveCase) ? currentMatch[0].toLocaleUpperCase() : currentMatch[0]
+      const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - matchedPattern.length)
       if ((!ignore_empty) || (ignore_empty && !utils.isEmptyString(textBeforeMatch))) {
         currentRow.push(textBeforeMatch)
         if (!col_delimiters.includes(matchedPattern)) {
