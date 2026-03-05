@@ -644,9 +644,10 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  * @param {*} text Required. Text string to split. If empty value is provided (undefined, null, ''), throw #VALUE error
  * @param {*} col_delimiter Required if no row_delimiter defined, optionnal else. Represents text as column string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @param {*} row_delimiter Required if no col_delimiter defined, optionnal else. Represents text as row string delimiter. If empty (undefined, null, ''), throw #VALUE error
+ * @param {*} ignore_empty Optionnal, Specify TRUE to ignore consecutive delimiters. Defaults to FALSE, which creates an empty cell
  * @returns
  */
-export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
+export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty) {
   if (utils.isEmptyString(text)) {
     return error.value
   }
@@ -706,11 +707,14 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
       if (currentMatch !== null) {
         const matchedPattern = currentMatch[0]
         const textBeforeMatch = text.slice(lastIndex, regex.lastIndex - matchedPattern.length)
-        currentRow.push(textBeforeMatch)
-        if (!col_delimiters.includes(matchedPattern)) {
-          result.push(currentRow)
-          colMax = Math.max(colMax, currentRow.length)
-          currentRow = []
+        const include = (!ignore_empty) || (ignore_empty && !utils.isEmptyString(textBeforeMatch)) 
+        if (include) {
+          currentRow.push(textBeforeMatch)
+          if (!col_delimiters.includes(matchedPattern)) {
+            result.push(currentRow)
+            colMax = Math.max(colMax, currentRow.length)
+            currentRow = []
+          }
         }
         
         lastIndex = regex.lastIndex
@@ -719,6 +723,12 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
       
     if (lastIndex < text.length)
       currentRow.push(text.slice(lastIndex, text.length))
+    else {
+      const include = (!ignore_empty)
+      if (include) {
+        currentRow.push('')
+      }
+    }
     result.push(currentRow)
   }
 
