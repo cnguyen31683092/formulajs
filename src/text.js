@@ -676,16 +676,10 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, matc
     return error.value
 
   const createRegex = (col_delimiters, row_delimiters, insensitiveCase) => {
-    const sanitizeDelimiters = delimiters => delimiters.map(delimiter =>
-      !utils.isDefined(delimiter) ? '' : delimiter
-    )
-    
-    const sanitized_col_delimiters = sanitizeDelimiters(col_delimiters)
-    const sanitized_row_delimiters = sanitizeDelimiters(row_delimiters)
     const regexReplacement = /[-/\\^$*+?.()|[\]{}]/g
     const sortByFn = (s1, s2) => s2.length - s1.length
-    const escaped_col_delimiters = sanitized_col_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
-    const escaped_row_delimiters = sanitized_row_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
+    const escaped_col_delimiters = col_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
+    const escaped_row_delimiters = row_delimiters.map((d) => d.replace(regexReplacement, '\\$&')).sort(sortByFn)
     
     const flags = 'g' + (insensitiveCase ? 'i' : '')
     return new RegExp([ ...escaped_col_delimiters, ...escaped_row_delimiters ].join('|'), flags)
