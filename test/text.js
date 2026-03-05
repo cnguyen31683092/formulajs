@@ -498,6 +498,14 @@ describe('Text', () => {
           ]
         )
       })
+
+      it('should split when delimiter with string.length >= 2', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ '.', ' ', '. ' ], '. ' )).to.deep.equal(
+          [
+            [ 'Do', 'Or', 'do', 'not', 'There', 'is', 'no', 'try', '-Anonymous' ]
+          ]
+        )
+      })
     })
   })
 
