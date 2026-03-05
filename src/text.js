@@ -681,7 +681,7 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter) {
 
   const createRegex = (delimiters) => {
     const sanitized = sanitizeDelimiters(delimiters)
-    const escaped = sanitized.map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')).sort((a, b) => b.length - a.length)
+    const escaped = sanitized.map((d) => d.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&'))
     
     return new RegExp(escaped.join('|'), 'g')
   }
