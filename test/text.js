@@ -490,6 +490,14 @@ describe('Text', () => {
           ]
         )
       })
+
+      it('should split prior to col_delimiter if same as row_delimiter when array row provided', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', [ '.', ' ' ], '. ' )).to.deep.equal(
+          [
+            [ 'Do', '', 'Or', 'do', 'not', '', 'There', 'is', 'no', 'try', '', '-Anonymous' ]
+          ]
+        )
+      })
     })
   })
 
