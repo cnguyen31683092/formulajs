@@ -646,9 +646,10 @@ export function TEXTJOIN(delimiter, ignore_empty, ...args) {
  * @param {*} row_delimiter Required if no col_delimiter defined, optionnal else. Represents text as row string delimiter. If empty (undefined, null, ''), throw #VALUE error
  * @param {*} ignore_empty Optionnal, Specify TRUE to ignore consecutive delimiters. Defaults to FALSE, which creates an empty cell
  * @param {*} match_mode Optionnal, Specify 1 to perform a case-insensitive match. Defaults to 0, which does a case-sensitive match
+ * @param {*} pad_with Optionnal, The value with which to pad the result. The default is #N/A
  * @returns
  */
-export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, match_mode) {
+export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, match_mode, pad_with) {
   if (utils.isEmptyString(text)) {
     return error.value
   }
@@ -708,7 +709,8 @@ export function TEXTSPLIT(text, col_delimiter, row_delimiter, ignore_empty, matc
   }
   result.push(currentRow)
 
-  return result.map(row => utils.arrayPadEnd(row, error.na, colMax))
+  const valueToPad = pad_with ?? error.na
+  return result.map(row => utils.arrayPadEnd(row, valueToPad, colMax))
 }
 
 /**
