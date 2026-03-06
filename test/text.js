@@ -555,6 +555,17 @@ describe('Text', () => {
         )
       })
     })
+
+    describe('with pad_with', () => {
+      it('should fill remaining column value after split', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', ' ', '.', false, 0, 'FILL_VALUE')).to.deep.equal([
+          [ 'Do',	'FILL_VALUE',	'FILL_VALUE',	'FILL_VALUE',	'FILL_VALUE' ],
+	        [ '', 'Or', 'do', 'not', 'FILL_VALUE' ],
+          [ '', 'There', 'is', 'no', 'try' ],
+          [ '', '-Anonymous', 'FILL_VALUE', 'FILL_VALUE', 'FILL_VALUE' ]
+	      ])
+      })
+    })
   })
 
   it('TRIM', () => {
