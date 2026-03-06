@@ -565,6 +565,15 @@ describe('Text', () => {
           [ '', '-Anonymous', 'FILL_VALUE', 'FILL_VALUE', 'FILL_VALUE' ]
 	      ])
       })
+
+      it('should fill remaining column with default value #N/A if not provided', () => {
+        expect(text.TEXTSPLIT('Do. Or do not. There is no try. -Anonymous', ' ', '.', false, 0)).to.deep.equal([
+          [ 'Do',	error.na,	error.na,	error.na,	error.na ],
+	        [ '', 'Or', 'do', 'not', error.na ],
+          [ '', 'There', 'is', 'no', 'try' ],
+          [ '', '-Anonymous', error.na, error.na, error.na ]
+	      ])
+      })
     })
   })
 
