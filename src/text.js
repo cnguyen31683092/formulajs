@@ -599,6 +599,175 @@ export function TEXT(value, format_text) {
   return value
 }
 
+// Booleans are rendered as TRUE / FALSE and large numbers as 1E+21 (Excel); both depend on the Excel locale
+const toText = (value) =>
+  typeof value === 'boolean'
+    ? String(value).toUpperCase()
+    : typeof value === 'number'
+      ? String(value).replace('e', 'E')
+      : utils.parseString(value)
+
+// match_mode / match_end: 0 or 1 once truncated to an integer
+function parseFlag(flag) {
+  const number = utils.parseNumber(flag)
+
+  if (number instanceof Error) {
+    return number
+  }
+
+  const integer = Math.trunc(number)
+
+  return integer === 0 || integer === 1 ? integer : error.value
+}
+
+// Length of the longest delimiter matching at `index` and ending at or before `limit`, -1 when none matches.
+// With `ignoreCase`, the delimiters must already be lower-cased.
+function matchLengthAt(text, delimiters, index, limit, ignoreCase) {
+  let matchLength = -1
+
+  for (let iDelimiter = 0; iDelimiter < delimiters.length; iDelimiter++) {
+    const delimiter = delimiters[iDelimiter]
+
+    if (delimiter.length > matchLength && index + delimiter.length <= limit) {
+      const candidate = text.substring(index, index + delimiter.length)
+
+      if ((ignoreCase ? candidate.toLowerCase() : candidate) === delimiter) {
+        matchLength = delimiter.length
+      }
+    }
+  }
+
+  return matchLength
+}
+
+// Shared implementation of TEXTAFTER (`after` = true) and TEXTBEFORE (`after` = false)
+function extractAroundDelimiter(after, text, delimiter, instance_num, match_mode, match_end, if_not_found) {
+  const delimiterList = Array.isArray(delimiter) ? utils.flatten(delimiter) : [delimiter]
+  const args = [text, ...delimiterList, instance_num, match_mode, match_end]
+
+  if (utils.anyIsError(...args)) {
+    return utils.anyError(...args)
+  }
+
+  if (delimiterList.length === 0 || [text, instance_num, match_mode, match_end].some((arg) => Array.isArray(arg))) {
+    return error.value
+  }
+
+  const hasInstance = instance_num !== undefined
+  const parsedInstance = hasInstance ? utils.parseNumber(instance_num) : 1
+  const ignoreCase = parseFlag(match_mode)
+  const matchEnd = parseFlag(match_end)
+
+  if (parsedInstance instanceof Error || ignoreCase instanceof Error || matchEnd instanceof Error) {
+    return error.value
+  }
+
+  // Excel rounds instance_num down: 1.9 => 1, -0.5 => -1
+  const instance = Math.floor(parsedInstance)
+
+  if (instance === 0) {
+    return error.value
+  }
+
+  const count = Math.abs(instance)
+  const forward = instance > 0
+  const content = toText(text)
+  const delimiters = delimiterList.map((item) => (ignoreCase ? toText(item).toLowerCase() : toText(item)))
+  const notFound = () =>
+    if_not_found === undefined ? error.na : if_not_found instanceof Error ? if_not_found : toText(if_not_found)
+
+  // An explicit instance_num cannot exceed the number of positions where the shortest delimiter fits, when the
+  // instance_num is omitted a delimiter longer than the text is simply not found
+  const minLength = Math.min(...delimiters.map((item) => item.length))
+  const maxInstance = content.length - minLength + 1
+
+  if (minLength > 0) {
+    if (hasInstance && count > maxInstance) {
+      return error.value
+    }
+
+    if (!hasInstance && maxInstance < 1) {
+      return notFound()
+    }
+  }
+
+  // Non-overlapping scan: left to right for a positive instance_num, right to left for a negative one.
+  // An empty delimiter matches immediately, whatever the instance_num is.
+  let start = 0
+  let end = 0
+  let found = 0
+  let limit = content.length
+
+  if (forward) {
+    for (let index = 0; index <= content.length && found < count; index++) {
+      const length = matchLengthAt(content, delimiters, index, limit, ignoreCase)
+
+      if (length >= 0) {
+        start = index
+        end = index + length
+        found = length === 0 ? count : found + 1
+        index = end - 1
+      }
+    }
+  } else {
+    for (let index = content.length; index >= 0 && found < count; index--) {
+      const length = matchLengthAt(content, delimiters, index, limit, ignoreCase)
+
+      if (length >= 0) {
+        start = index
+        end = index + length
+        found = length === 0 ? count : found + 1
+        limit = start
+      }
+    }
+  }
+
+  if (found < count) {
+    // match_end: the end (or the start, when counting from the end) of the text stands for one more delimiter
+    if (matchEnd === 1 && found === count - 1) {
+      start = end = forward ? content.length : 0
+    } else {
+      return notFound()
+    }
+  }
+
+  return after ? content.substring(end) : content.substring(0, start)
+}
+
+/**
+ * Returns text that occurs after given character or string.
+ *
+ * Category: Text
+ *
+ * @param {*} text The text you are searching within. Wildcard characters are not allowed.
+ * @param {*} delimiter The text that marks the point after which you want to extract. Can be an array of delimiters.
+ * @param {*} [instance_num] The instance of the delimiter after which you want to extract the text. Defaults to 1, a negative number searches from the end of the text.
+ * @param {*} [match_mode] 0 for a case-sensitive search (default), 1 for a case-insensitive search.
+ * @param {*} [match_end] 0 to not treat the end of the text as a delimiter (default), 1 to treat it as a delimiter.
+ * @param {*} [if_not_found] The value returned when no match is found. Defaults to #N/A.
+ * @returns
+ */
+export function TEXTAFTER(text, delimiter, instance_num, match_mode, match_end, if_not_found) {
+  return extractAroundDelimiter(true, text, delimiter, instance_num, match_mode, match_end, if_not_found)
+}
+
+/**
+ * Returns text that occurs before a given character or string.
+ *
+ * Category: Text
+ *
+ * @param {*} text The text you are searching within. Wildcard characters are not allowed.
+ * @param {*} delimiter The text that marks the point before which you want to extract. Can be an array of delimiters.
+ * @param {*} [instance_num] The instance of the delimiter before which you want to extract the text. Defaults to 1, a negative number searches from the end of the text.
+ * @param {*} [match_mode] 0 for a case-sensitive search (default), 1 for a case-insensitive search.
+ * @param {*} [match_end] 0 to not treat the end of the text as a delimiter (default), 1 to treat it as a delimiter.
+ * @param {*} [if_not_found] The value returned when no match is found. Defaults to #N/A.
+ * @returns
+ */
+export function TEXTBEFORE(text, delimiter, instance_num, match_mode, match_end, if_not_found) {
+  return extractAroundDelimiter(false, text, delimiter, instance_num, match_mode, match_end, if_not_found)
+}
+
 /**
  * Combines the text from multiple ranges and/or strings.
  *

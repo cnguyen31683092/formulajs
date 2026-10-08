@@ -486,3 +486,869 @@ describe('Text', () => {
     })
   })
 })
+
+// Expected values were observed in Microsoft Excel Desktop (Formula2, through COM) for the same arguments, except for
+// the documentation examples. Behaviours that depend on the Excel locale (decimal separator, TRUE / FALSE as text) are not tested.
+describe('TEXTAFTER', () => {
+  describe('args: (text, delimiter, [instance_num], [match_mode], [match_end], [if_not_found])', () => {
+    describe('should return the text after the delimiter.', () => {
+      it('examples from Microsoft docs', () => {
+        expect(text.TEXTAFTER("Red riding hood's, red hood", 'hood')).to.equal("'s, red hood")
+        expect(text.TEXTAFTER("Red riding hood's, red hood", '')).to.equal("Red riding hood's, red hood")
+        expect(text.TEXTAFTER("Red riding hood's, red hood", '', -1)).to.equal('')
+        expect(text.TEXTAFTER("Little Red Riding Hood's red hood", 'Red')).to.equal(" Riding Hood's red hood")
+        expect(text.TEXTAFTER("Little Red Riding Hood's red hood", 'basket')).to.eql(error.na)
+        expect(text.TEXTAFTER("Little red Riding Hood's red hood", 'red', 2)).to.equal(' hood')
+        expect(text.TEXTAFTER("Little red Riding Hood's red hood", 'red', -2)).to.equal(" Riding Hood's red hood")
+        expect(text.TEXTAFTER('Marcus Aurelius', ' ', undefined, undefined, 1)).to.equal('Aurelius')
+      })
+
+      it('with only the required args => first instance, case-sensitive', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', ',')).to.equal('banana,cherry')
+        expect(text.TEXTAFTER('apple,banana,cherry', ',', 1)).to.equal('banana,cherry')
+      })
+
+      it('with instance_num > 0 => counts from the start of the text', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', ',', 2)).to.equal('cherry')
+        expect(text.TEXTAFTER('a,,b', ',', 2)).to.equal('b')
+      })
+
+      it('with instance_num < 0 => counts from the end of the text', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', ',', -1)).to.equal('cherry')
+        expect(text.TEXTAFTER('apple,banana,cherry', ',', -2)).to.equal('banana,cherry')
+        expect(text.TEXTAFTER('a,b,c', ',', -2)).to.equal('b,c')
+        expect(text.TEXTAFTER('a,b,c', ',', -1, 0, 1)).to.equal('c')
+      })
+
+      it('with a decimal instance_num => rounded down', () => {
+        expect(text.TEXTAFTER('a,b,c', ',', 1.9)).to.equal('b,c')
+        expect(text.TEXTAFTER('a,b,c', ',', -1.9)).to.equal('b,c')
+        expect(text.TEXTAFTER('a,b,c,d', ',', -2.5)).to.equal('b,c,d')
+        expect(text.TEXTAFTER('a,b,c,d,e', ',', -0.5)).to.equal('e')
+        expect(text.TEXTAFTER('a,b,c,d,e', ',', -2.5)).to.equal('c,d,e')
+        expect(text.TEXTAFTER('a,b,c,d,e', ',', 1.5)).to.equal('b,c,d,e')
+        expect(text.TEXTAFTER('a,b,c,d,e', ',', 2.5)).to.equal('c,d,e')
+        expect(text.TEXTAFTER('a,b', ',', 3.9)).to.eql(error.na)
+      })
+
+      it('with a numeric text or a boolean instance_num => converted to a number', () => {
+        expect(text.TEXTAFTER('a,b,c', ',', '2')).to.equal('c')
+        expect(text.TEXTAFTER('a,b,c', ',', true)).to.equal('b,c')
+        expect(text.TEXTAFTER('a,b,c', ',', '-1')).to.equal('c')
+        expect(text.TEXTAFTER('a,b,c', ',', ' 2 ')).to.equal('c')
+      })
+
+      it('with overlapping delimiters => matches do not overlap', () => {
+        expect(text.TEXTAFTER('aaaa', 'aa', 2)).to.equal('')
+        expect(text.TEXTAFTER('aaaa', 'aa', 3)).to.eql(error.na)
+        expect(text.TEXTAFTER('aaaa', 'aa', -1)).to.equal('')
+        expect(text.TEXTAFTER('aaa', 'aa', 1)).to.equal('a')
+        expect(text.TEXTAFTER('aaa', 'aa', -1)).to.equal('')
+        expect(text.TEXTAFTER('aaa', 'aa', 2)).to.eql(error.na)
+        expect(text.TEXTAFTER('aaa', 'aa', -2)).to.eql(error.na)
+        expect(text.TEXTAFTER('ababa', 'aba', 2)).to.eql(error.na)
+        expect(text.TEXTAFTER('ababa', 'aba', -2)).to.eql(error.na)
+        expect(text.TEXTAFTER('ababa', 'aba', -1)).to.equal('')
+      })
+
+      it('with a delimiter equal to the whole text', () => {
+        expect(text.TEXTAFTER('abc', 'abc')).to.equal('')
+        expect(text.TEXTAFTER('abc', 'abc', -1)).to.equal('')
+      })
+
+      it('with a delimiter at the start or at the end of the text', () => {
+        expect(text.TEXTAFTER(',a', ',')).to.equal('a')
+        expect(text.TEXTAFTER('a,', ',')).to.equal('')
+        expect(text.TEXTAFTER(',', ',')).to.equal('')
+      })
+
+      it('with a multi-character delimiter', () => {
+        expect(text.TEXTAFTER('a::b::c', '::')).to.equal('b::c')
+        expect(text.TEXTAFTER('a  b', ' ')).to.equal(' b')
+        expect(text.TEXTAFTER('a , b', ' , ')).to.equal('b')
+      })
+    })
+
+    describe('should handle special characters and types.', () => {
+      it('with wildcards, tilde and regex characters => taken literally', () => {
+        expect(text.TEXTAFTER('a*b', '*')).to.equal('b')
+        expect(text.TEXTAFTER('a?b', '?')).to.equal('b')
+        expect(text.TEXTAFTER('a~b', '~')).to.equal('b')
+        expect(text.TEXTAFTER('axb', '*')).to.eql(error.na)
+        expect(text.TEXTAFTER('a.b', '.')).to.equal('b')
+        expect(text.TEXTAFTER('a(+)b', '(+)')).to.equal('b')
+      })
+
+      it('with a newline delimiter', () => {
+        expect(text.TEXTAFTER('a' + '\n' + 'b', '\n')).to.equal('b')
+      })
+
+      it('with an emoji delimiter (UTF-16 surrogate pair)', () => {
+        expect(text.TEXTAFTER('a😀b😀c', '😀', 2)).to.equal('c')
+        expect(text.TEXTAFTER('😀ab', '😀')).to.equal('ab')
+      })
+
+      it('with a non-breaking space => not equal to a space', () => {
+        expect(text.TEXTAFTER('a' + String.fromCodePoint(160) + 'b', ' ')).to.eql(error.na)
+      })
+
+      it('with an accented letter => not equal to its decomposed form', () => {
+        expect(text.TEXTAFTER('e' + String.fromCodePoint(769) + 'x', 'é')).to.eql(error.na)
+      })
+
+      it('with numbers as text and delimiter => converted to text', () => {
+        expect(text.TEXTAFTER(12345, 3)).to.equal('45')
+        expect(text.TEXTAFTER('a1b', 1)).to.equal('b')
+        expect(text.TEXTAFTER('a0b', '0')).to.equal('b')
+        expect(text.TEXTAFTER('a0b', 0)).to.equal('b')
+        expect(text.TEXTAFTER(0, '0')).to.equal('')
+        expect(text.TEXTAFTER(10, '0')).to.equal('')
+        expect(text.TEXTAFTER(1e21, 'E')).to.equal('+21')
+      })
+    })
+
+    describe('should handle match_mode.', () => {
+      it('with match_mode = 0 => case-sensitive', () => {
+        expect(text.TEXTAFTER('Apple,banana,cherry', ',', 1, 0)).to.equal('banana,cherry')
+        expect(text.TEXTAFTER('apple Banana cherry', 'BANANA', 1, 0)).to.eql(error.na)
+        expect(text.TEXTAFTER('Éa,b', 'é', 1, 0)).to.eql(error.na)
+        expect(text.TEXTAFTER('ab', 'xyz', 2)).to.eql(error.value)
+        expect(text.TEXTAFTER('Ab', 'B', 1, 0.5)).to.eql(error.na)
+        expect(text.TEXTAFTER('Ab', 'B', 1, -0.5)).to.eql(error.na)
+        expect(text.TEXTAFTER('Ab', 'B', 1, -0.9)).to.eql(error.na)
+        expect(text.TEXTAFTER('Ab', 'B', 1, false)).to.eql(error.na)
+        expect(text.TEXTAFTER('Ab', 'B', 1, null)).to.eql(error.na)
+      })
+
+      it('with match_mode = 1 => case-insensitive', () => {
+        expect(text.TEXTAFTER('apple Banana cherry', 'BANANA', 1, 1)).to.equal(' cherry')
+        expect(text.TEXTAFTER('Éa,b', 'é', 1, 1)).to.equal('a,b')
+        expect(text.TEXTAFTER('xABxabx', 'AB', -1, 1)).to.equal('x')
+        expect(text.TEXTAFTER('abc', 'B', 1, 1)).to.equal('c')
+        expect(text.TEXTAFTER('аБв', 'б', 1, 1)).to.equal('в')
+        expect(text.TEXTAFTER('aİb', 'i̇', 1, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('aßb', 'SS', 1, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('aΣb', 'ς', 1, 1)).to.eql(error.na)
+      })
+
+      it('with a numeric text, a boolean or a decimal match_mode => converted then truncated', () => {
+        expect(text.TEXTAFTER('Ab', 'B', 1, '1')).to.equal('')
+        expect(text.TEXTAFTER('Ab', 'B', 1, true)).to.equal('')
+        expect(text.TEXTAFTER('Ab', 'B', 1, 1.5)).to.equal('')
+        expect(text.TEXTAFTER('Ab', 'B', 1, 1.9)).to.equal('')
+      })
+    })
+
+    describe('should handle match_end.', () => {
+      it('with match_end = 1 => the end of the text counts as a delimiter', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', 'cherry', 1, 0, 1)).to.equal('')
+        expect(text.TEXTAFTER('Marcus Aurelius', ' ', 1, 0, 1)).to.equal('Aurelius')
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 1)).to.equal('')
+        expect(text.TEXTAFTER('abc', ',', 1, 0, 1)).to.equal('')
+        expect(text.TEXTAFTER('abc', ',', -1, 0, 1)).to.equal('abc')
+        expect(text.TEXTAFTER('a,B,c', 'b', 1, 1, 1)).to.equal(',c')
+        expect(text.TEXTAFTER('abc', 'X', 1, 1, 1)).to.equal('')
+      })
+
+      it('with match_end = 1 and a negative instance_num => the start of the text counts as a delimiter', () => {
+        expect(text.TEXTAFTER('a,b,c', ',', -3, 0, 1)).to.equal('a,b,c')
+        expect(text.TEXTAFTER('abc', ',', -1, 0, 1)).to.equal('abc')
+        expect(text.TEXTAFTER(',a', ',', -2, 0, 1)).to.equal(',a')
+        expect(text.TEXTAFTER(',a', ',', -1, 0, 1)).to.equal('a')
+        expect(text.TEXTAFTER('a,b,', ',', -1, 0, 1)).to.equal('')
+      })
+
+      it('with match_end = 1 => it stands for one more delimiter only', () => {
+        expect(text.TEXTAFTER('a,b', ',', 3, 0, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b,c', ',', -4, 0, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', ',', 2, 0, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b,', ',', 3, 0, 1)).to.equal('')
+        expect(text.TEXTAFTER('a,b,', ',', 4, 0, 1)).to.eql(error.na)
+      })
+
+      it('with match_end = 0 => the end of the text is not a delimiter', () => {
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 0)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b,c', ',', -3, 0, 0)).to.eql(error.na)
+      })
+
+      it('with a boolean, a numeric text or a decimal match_end => converted then truncated', () => {
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, true)).to.equal('')
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, '1')).to.equal('')
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 1.5)).to.equal('')
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 0.9)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, false)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, null)).to.eql(error.na)
+      })
+    })
+
+    describe('should handle if_not_found.', () => {
+      it('with the delimiter not found => returns if_not_found as text', () => {
+        expect(text.TEXTAFTER('abc', ',', undefined, undefined, undefined, 'nf')).to.equal('nf')
+        expect(text.TEXTAFTER('abc', ',', undefined, undefined, undefined, '')).to.equal('')
+        expect(text.TEXTAFTER('abc', ',', undefined, undefined, undefined, 0)).to.equal('0')
+        expect(text.TEXTAFTER('abc', ',', undefined, undefined, undefined, null)).to.equal('')
+        expect(text.TEXTAFTER('', ',', undefined, undefined, undefined, 'nf')).to.equal('nf')
+        expect(text.TEXTAFTER('abc', ',', 3, 0, 0, 'nf')).to.equal('nf')
+      })
+
+      it('with the delimiter found => ignores if_not_found', () => {
+        expect(text.TEXTAFTER('a,b', ',', undefined, undefined, undefined, 'nf')).to.equal('b')
+        expect(text.TEXTAFTER('a,b', ',', undefined, undefined, undefined, error.div0)).to.equal('b')
+      })
+
+      it('with an omitted if_not_found => #N/A', () => {
+        expect(text.TEXTAFTER('abc', ',', undefined, undefined, undefined, undefined)).to.eql(error.na)
+      })
+
+      it('with an error as if_not_found => returns it when the delimiter is not found', () => {
+        expect(text.TEXTAFTER('abc', ',', undefined, undefined, undefined, error.div0)).to.eql(error.div0)
+        expect(text.TEXTAFTER('abc', ',', 1, 0, 0, error.na)).to.eql(error.na)
+      })
+    })
+
+    describe('should handle an empty delimiter.', () => {
+      it('with a positive instance_num => the delimiter matches at the start of the text', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', '')).to.equal('apple,banana,cherry')
+        expect(text.TEXTAFTER('abc', '', 2)).to.equal('abc')
+        expect(text.TEXTAFTER('abc', '', 3)).to.equal('abc')
+        expect(text.TEXTAFTER('abc', '', 4)).to.equal('abc')
+        expect(text.TEXTAFTER('abc', '', 5)).to.equal('abc')
+        expect(text.TEXTAFTER('abc', '', 100)).to.equal('abc')
+        expect(text.TEXTAFTER('abc', '', 1e10)).to.equal('abc')
+      })
+
+      it('with a negative instance_num => the delimiter matches at the end of the text', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', '', -1)).to.equal('')
+        expect(text.TEXTAFTER('abc', '', -2)).to.equal('')
+        expect(text.TEXTAFTER('abc', '', -4)).to.equal('')
+        expect(text.TEXTAFTER('abc', '', -100)).to.equal('')
+      })
+
+      it('with match_end = 1', () => {
+        expect(text.TEXTAFTER('abc', '', 1, 0, 1)).to.equal('abc')
+        expect(text.TEXTAFTER('abc', '', -1, 0, 1)).to.equal('')
+      })
+
+      it('with an empty cell as delimiter', () => {
+        expect(text.TEXTAFTER('a,b', null)).to.equal('a,b')
+      })
+
+      it('with an empty text', () => {
+        expect(text.TEXTAFTER('', '')).to.equal('')
+        expect(text.TEXTAFTER('', '', -1)).to.equal('')
+        expect(text.TEXTAFTER('', '', 2)).to.equal('')
+        expect(text.TEXTAFTER(null, null)).to.equal('')
+      })
+    })
+
+    describe('should handle an empty text.', () => {
+      it('with a delimiter => not found', () => {
+        expect(text.TEXTAFTER('', ',')).to.eql(error.na)
+        expect(text.TEXTAFTER(null, ',')).to.eql(error.na)
+        expect(text.TEXTAFTER('', ',', undefined, undefined, undefined, 'nf')).to.equal('nf')
+        expect(text.TEXTAFTER('', ',', undefined, undefined, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('', ',', undefined, undefined, 1, 'nf')).to.equal('nf')
+        expect(text.TEXTAFTER('', ',', undefined, 1)).to.eql(error.na)
+      })
+    })
+
+    describe('should handle several delimiters.', () => {
+      it('with an array of delimiters => the first match of any delimiter is used', () => {
+        expect(text.TEXTAFTER('a,b;c', [[',', ';']])).to.equal('b;c')
+        expect(text.TEXTAFTER('a,b;c', [[',', ';']], 2)).to.equal('c')
+        expect(text.TEXTAFTER('a,b;c', [[',', ';']], -1)).to.equal('c')
+        expect(text.TEXTAFTER('a,b;c', [[';', ',']])).to.equal('b;c')
+        expect(text.TEXTAFTER('abc', [[',', ';']])).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', [[',']], 2, 0, 1)).to.equal('')
+        expect(text.TEXTAFTER('a,b;c', [[','], [';']])).to.equal('b;c')
+        expect(text.TEXTAFTER('abcbcd', [['b', 'bc']], 2)).to.equal('d')
+        expect(text.TEXTAFTER('abcbcd', [['b', 'bc']], -2)).to.equal('bcd')
+      })
+
+      it('with an array of delimiters => the longest one wins when several match at the same position', () => {
+        expect(text.TEXTAFTER('abcd', [['bc', 'b']])).to.equal('d')
+        expect(text.TEXTAFTER('abcd', [['b', 'bc']])).to.equal('d')
+        expect(text.TEXTAFTER('aBCd', [['b', 'bc']], 1, 1)).to.equal('d')
+        expect(text.TEXTAFTER('abcd', [['b', 'bc']], -1)).to.equal('d')
+        expect(text.TEXTAFTER('abcd', [['cd', 'd']], -1)).to.equal('')
+        expect(text.TEXTAFTER('abcd', [['bc', 'cd']], -1)).to.equal('')
+        expect(text.TEXTAFTER('abcd', [['c', 'bc']], -1)).to.equal('d')
+        expect(text.TEXTAFTER('a,b', [['', ',']])).to.equal('a,b')
+      })
+
+      it('with an array of delimiters and match_mode = 1', () => {
+        expect(text.TEXTAFTER('aXbYc', [['x', 'y']], 2, 1)).to.equal('c')
+      })
+
+      it('with an array of delimiters => the shortest one sets the maximum instance_num', () => {
+        expect(text.TEXTAFTER('abc', [['abcd', 'x']], 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', [['x', 'yy']], 3)).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', [['x', 'yy']], 4)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', [[',', ';']], 4)).to.eql(error.value)
+      })
+    })
+
+    describe('throws error', () => {
+      it('#N/A when the delimiter is not found', () => {
+        expect(text.TEXTAFTER('apple', ',')).to.eql(error.na)
+        expect(text.TEXTAFTER('axb', '*')).to.eql(error.na)
+        expect(text.TEXTAFTER('a' + String.fromCodePoint(160) + 'b', ' ')).to.eql(error.na)
+      })
+
+      it('#N/A when instance_num exceeds the number of occurrences', () => {
+        expect(text.TEXTAFTER('apple,banana', ',', 5)).to.eql(error.na)
+        expect(text.TEXTAFTER('apple,banana,cherry', 'banana', 2)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b,c', ',', -3)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', -3)).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', ',', 3)).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', ',', -3)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', 3)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 0)).to.eql(error.na)
+      })
+
+      it('#N/A when the delimiter is longer than the text and instance_num is omitted', () => {
+        expect(text.TEXTAFTER('abc', 'abcd')).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', 'abcd', undefined, undefined, 1)).to.eql(error.na)
+        expect(text.TEXTAFTER('abc', 'abcd', undefined, 1)).to.eql(error.na)
+      })
+
+      it('#VALUE! when instance_num is 0 or rounds down to 0', () => {
+        expect(text.TEXTAFTER('apple,banana,cherry', ',', 0)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', 0.5)).to.eql(error.value)
+        expect(text.TEXTAFTER('', '', 0)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', 0.99999)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num is not a number', () => {
+        expect(text.TEXTAFTER('a,b,c', ',', 'x')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', null)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', '')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', false)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num exceeds the length of the text', () => {
+        expect(text.TEXTAFTER('a,b', ',', 4)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', -4)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', 1e10)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', ',', 4)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', ',', -4)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', ',', 4, 0, 1)).to.eql(error.value)
+        expect(text.TEXTAFTER('😀', ',', 3)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 4.1)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num is given and the delimiter is longer than the text', () => {
+        expect(text.TEXTAFTER('abc', 'abcd', 1)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', 'abcd', -1)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', 'abcd', 1, 0, 0, 'nf')).to.eql(error.value)
+        expect(text.TEXTAFTER('ab', 'abc', 1)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', 'abd', 2)).to.eql(error.value)
+        expect(text.TEXTAFTER('ab', 'xyz', 2)).to.eql(error.value)
+        expect(text.TEXTAFTER('ab', 'xyz', 3)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num is given and the text is empty', () => {
+        expect(text.TEXTAFTER('', ',', 1)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', 2)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', -1)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', 0)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', 1, 0, 0)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', -1, 0, 1)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', 1, 0, 1, 'nf')).to.eql(error.value)
+      })
+
+      it('#VALUE! when match_mode is not 0 or 1', () => {
+        expect(text.TEXTAFTER('a,b,c', ',', 1, 2)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', 1, -1)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', 1, 'x')).to.eql(error.value)
+        expect(text.TEXTAFTER('Ab', 'B', 1, 2.5)).to.eql(error.value)
+        expect(text.TEXTAFTER('Ab', 'B', 1, '')).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', '', 1, 5)).to.eql(error.value)
+      })
+
+      it('#VALUE! when match_end is not 0 or 1', () => {
+        expect(text.TEXTAFTER('a,b,c', ',', 1, 0, 2)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b,c', ',', 1, 0, -1)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 'x')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, 2.5)).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, '')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 2, 0, -1)).to.eql(error.value)
+        expect(text.TEXTAFTER('abc', '', 1, 0, 5)).to.eql(error.value)
+      })
+
+      it('#VALUE! when an argument is invalid, even if if_not_found is given', () => {
+        expect(text.TEXTAFTER('a,b', ',', 5, undefined, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 0, undefined, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 1, 2, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 1, 0, 2, 'nf')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', -5, undefined, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTAFTER('a,b', ',', 0, 0, 0, error.div0)).to.eql(error.value)
+      })
+
+      it('#VALUE! when the text is empty and match_mode is invalid', () => {
+        expect(text.TEXTAFTER('', ',', 1, 5)).to.eql(error.value)
+        expect(text.TEXTAFTER('', '', 1, 5)).to.eql(error.value)
+        expect(text.TEXTAFTER('', ',', undefined, 5)).to.eql(error.value)
+      })
+
+      it('the error of the first invalid argument when text is an error', () => {
+        expect(text.TEXTAFTER(error.div0, ',')).to.eql(error.div0)
+        expect(text.TEXTAFTER(error.div0, ',', 0)).to.eql(error.div0)
+        expect(text.TEXTAFTER(error.na, ',', 0)).to.eql(error.na)
+        expect(text.TEXTAFTER(error.div0, ',', 1, 5)).to.eql(error.div0)
+        expect(text.TEXTAFTER(error.value, ',')).to.eql(error.value)
+        expect(text.TEXTAFTER(error.na, ',', undefined, undefined, undefined, 'nf')).to.eql(error.na)
+      })
+
+      it('the error of the first invalid argument when another argument is an error', () => {
+        expect(text.TEXTAFTER('a,b', error.div0)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', ',', error.div0)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', ',', 1, error.div0)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', ',', 1, 0, error.div0)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', error.na, undefined, undefined, undefined, 'nf')).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', error.div0, 5)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', ',', 9, 0, error.div0)).to.eql(error.div0)
+      })
+
+      it('the error of the first invalid argument when several arguments are errors => the first one wins', () => {
+        expect(text.TEXTAFTER(error.div0, error.na)).to.eql(error.div0)
+        expect(text.TEXTAFTER(error.na, ',', error.div0)).to.eql(error.na)
+        expect(text.TEXTAFTER('a,b', ',', 0, error.div0)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', ',', 1, error.div0, error.na)).to.eql(error.div0)
+        expect(text.TEXTAFTER('a,b', error.div0, error.na)).to.eql(error.div0)
+      })
+    })
+  })
+})
+
+describe('TEXTBEFORE', () => {
+  describe('args: (text, delimiter, [instance_num], [match_mode], [match_end], [if_not_found])', () => {
+    describe('should return the text before the delimiter.', () => {
+      it('examples from Microsoft docs', () => {
+        expect(text.TEXTBEFORE("Red riding hood's, red hood", 'hood')).to.equal('Red riding ')
+        expect(text.TEXTBEFORE("Red riding hood's, red hood", '')).to.equal('')
+        expect(text.TEXTBEFORE("Red riding hood's, red hood", '', -1)).to.equal("Red riding hood's, red hood")
+        expect(text.TEXTBEFORE("Little Red Riding Hood's red hood", 'Red')).to.equal('Little ')
+        expect(text.TEXTBEFORE("Little red Riding Hood's red hood", 'Red')).to.eql(error.na)
+        expect(text.TEXTBEFORE("Little red Riding Hood's red hood", 'red', 2)).to.equal("Little red Riding Hood's ")
+        expect(text.TEXTBEFORE('Marcus Aurelius', ' ', undefined, undefined, 1)).to.equal('Marcus')
+        expect(text.TEXTBEFORE('Socrates', ' ', undefined, undefined, 1)).to.equal('Socrates')
+      })
+
+      it('with only the required args => first instance, case-sensitive', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', ',')).to.equal('apple')
+        expect(text.TEXTBEFORE('apple,banana,cherry', ',', 1)).to.equal('apple')
+      })
+
+      it('with instance_num > 0 => counts from the start of the text', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', ',', 2)).to.equal('apple,banana')
+        expect(text.TEXTBEFORE('a,,b', ',', 2)).to.equal('a,')
+      })
+
+      it('with instance_num < 0 => counts from the end of the text', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', ',', -1)).to.equal('apple,banana')
+        expect(text.TEXTBEFORE('apple,banana,cherry', ',', -2)).to.equal('apple')
+        expect(text.TEXTBEFORE('a,b,c', ',', -2)).to.equal('a')
+        expect(text.TEXTBEFORE('a,b,c', ',', -1, 0, 1)).to.equal('a,b')
+      })
+
+      it('with a decimal instance_num => rounded down', () => {
+        expect(text.TEXTBEFORE('a,b,c', ',', 1.9)).to.equal('a')
+        expect(text.TEXTBEFORE('a,b,c', ',', -1.9)).to.equal('a')
+        expect(text.TEXTBEFORE('a,b,c,d', ',', -2.5)).to.equal('a')
+        expect(text.TEXTBEFORE('a,b,c,d,e', ',', -0.5)).to.equal('a,b,c,d')
+        expect(text.TEXTBEFORE('a,b,c,d,e', ',', -2.5)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b,c,d,e', ',', 1.5)).to.equal('a')
+        expect(text.TEXTBEFORE('a,b,c,d,e', ',', 2.5)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b', ',', 3.9)).to.eql(error.na)
+      })
+
+      it('with a numeric text or a boolean instance_num => converted to a number', () => {
+        expect(text.TEXTBEFORE('a,b,c', ',', '2')).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b,c', ',', true)).to.equal('a')
+        expect(text.TEXTBEFORE('a,b,c', ',', '-1')).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b,c', ',', ' 2 ')).to.equal('a,b')
+      })
+
+      it('with overlapping delimiters => matches do not overlap', () => {
+        expect(text.TEXTBEFORE('aaaa', 'aa', 2)).to.equal('aa')
+        expect(text.TEXTBEFORE('aaaa', 'aa', 3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('aaaa', 'aa', -1)).to.equal('aa')
+        expect(text.TEXTBEFORE('aaa', 'aa', 1)).to.equal('')
+        expect(text.TEXTBEFORE('aaa', 'aa', -1)).to.equal('a')
+        expect(text.TEXTBEFORE('aaa', 'aa', 2)).to.eql(error.na)
+        expect(text.TEXTBEFORE('aaa', 'aa', -2)).to.eql(error.na)
+        expect(text.TEXTBEFORE('ababa', 'aba', 2)).to.eql(error.na)
+        expect(text.TEXTBEFORE('ababa', 'aba', -2)).to.eql(error.na)
+        expect(text.TEXTBEFORE('ababa', 'aba', -1)).to.equal('ab')
+      })
+
+      it('with a delimiter equal to the whole text', () => {
+        expect(text.TEXTBEFORE('abc', 'abc')).to.equal('')
+        expect(text.TEXTBEFORE('abc', 'abc', -1)).to.equal('')
+      })
+
+      it('with a delimiter at the start or at the end of the text', () => {
+        expect(text.TEXTBEFORE(',a', ',')).to.equal('')
+        expect(text.TEXTBEFORE('a,', ',')).to.equal('a')
+        expect(text.TEXTBEFORE(',', ',')).to.equal('')
+      })
+
+      it('with a multi-character delimiter', () => {
+        expect(text.TEXTBEFORE('a::b::c', '::')).to.equal('a')
+        expect(text.TEXTBEFORE('a  b', ' ')).to.equal('a')
+        expect(text.TEXTBEFORE('a , b', ' , ')).to.equal('a')
+      })
+    })
+
+    describe('should handle special characters and types.', () => {
+      it('with wildcards, tilde and regex characters => taken literally', () => {
+        expect(text.TEXTBEFORE('a*b', '*')).to.equal('a')
+        expect(text.TEXTBEFORE('a?b', '?')).to.equal('a')
+        expect(text.TEXTBEFORE('a~b', '~')).to.equal('a')
+        expect(text.TEXTBEFORE('axb', '*')).to.eql(error.na)
+        expect(text.TEXTBEFORE('a.b', '.')).to.equal('a')
+        expect(text.TEXTBEFORE('a(+)b', '(+)')).to.equal('a')
+      })
+
+      it('with a newline delimiter', () => {
+        expect(text.TEXTBEFORE('a' + '\n' + 'b', '\n')).to.equal('a')
+      })
+
+      it('with an emoji delimiter (UTF-16 surrogate pair)', () => {
+        expect(text.TEXTBEFORE('a😀b😀c', '😀', 2)).to.equal('a😀b')
+        expect(text.TEXTBEFORE('😀ab', '😀')).to.equal('')
+      })
+
+      it('with a non-breaking space => not equal to a space', () => {
+        expect(text.TEXTBEFORE('a' + String.fromCodePoint(160) + 'b', ' ')).to.eql(error.na)
+      })
+
+      it('with an accented letter => not equal to its decomposed form', () => {
+        expect(text.TEXTBEFORE('e' + String.fromCodePoint(769) + 'x', 'é')).to.eql(error.na)
+      })
+
+      it('with numbers as text and delimiter => converted to text', () => {
+        expect(text.TEXTBEFORE(12345, 3)).to.equal('12')
+        expect(text.TEXTBEFORE('a1b', 1)).to.equal('a')
+        expect(text.TEXTBEFORE('a0b', '0')).to.equal('a')
+        expect(text.TEXTBEFORE('a0b', 0)).to.equal('a')
+        expect(text.TEXTBEFORE(0, '0')).to.equal('')
+        expect(text.TEXTBEFORE(10, '0')).to.equal('1')
+        expect(text.TEXTBEFORE(1e21, 'E')).to.equal('1')
+      })
+    })
+
+    describe('should handle match_mode.', () => {
+      it('with match_mode = 0 => case-sensitive', () => {
+        expect(text.TEXTBEFORE('Apple,banana,cherry', ',', 1, 0)).to.equal('Apple')
+        expect(text.TEXTBEFORE('apple Banana cherry', 'BANANA', 1, 0)).to.eql(error.na)
+        expect(text.TEXTBEFORE('Éa,b', 'é', 1, 0)).to.eql(error.na)
+        expect(text.TEXTBEFORE('ab', 'xyz', 2)).to.eql(error.value)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, 0.5)).to.eql(error.na)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, -0.5)).to.eql(error.na)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, -0.9)).to.eql(error.na)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, false)).to.eql(error.na)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, null)).to.eql(error.na)
+      })
+
+      it('with match_mode = 1 => case-insensitive', () => {
+        expect(text.TEXTBEFORE('apple Banana cherry', 'BANANA', 1, 1)).to.equal('apple ')
+        expect(text.TEXTBEFORE('Éa,b', 'é', 1, 1)).to.equal('')
+        expect(text.TEXTBEFORE('xABxabx', 'AB', -1, 1)).to.equal('xABx')
+        expect(text.TEXTBEFORE('abc', 'B', 1, 1)).to.equal('a')
+        expect(text.TEXTBEFORE('аБв', 'б', 1, 1)).to.equal('а')
+        expect(text.TEXTBEFORE('aİb', 'i̇', 1, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('aßb', 'SS', 1, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('aΣb', 'ς', 1, 1)).to.eql(error.na)
+      })
+
+      it('with a numeric text, a boolean or a decimal match_mode => converted then truncated', () => {
+        expect(text.TEXTBEFORE('Ab', 'B', 1, '1')).to.equal('A')
+        expect(text.TEXTBEFORE('Ab', 'B', 1, true)).to.equal('A')
+        expect(text.TEXTBEFORE('Ab', 'B', 1, 1.5)).to.equal('A')
+        expect(text.TEXTBEFORE('Ab', 'B', 1, 1.9)).to.equal('A')
+      })
+    })
+
+    describe('should handle match_end.', () => {
+      it('with match_end = 1 => the end of the text counts as a delimiter', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', 'cherry', 1, 0, 1)).to.equal('apple,banana,')
+        expect(text.TEXTBEFORE('Marcus Aurelius', ' ', 1, 0, 1)).to.equal('Marcus')
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 1)).to.equal('a,b')
+        expect(text.TEXTBEFORE('abc', ',', 1, 0, 1)).to.equal('abc')
+        expect(text.TEXTBEFORE('abc', ',', -1, 0, 1)).to.equal('')
+        expect(text.TEXTBEFORE('a,B,c', 'b', 1, 1, 1)).to.equal('a,')
+        expect(text.TEXTBEFORE('abc', 'X', 1, 1, 1)).to.equal('abc')
+      })
+
+      it('with match_end = 1 and a negative instance_num => the start of the text counts as a delimiter', () => {
+        expect(text.TEXTBEFORE('a,b,c', ',', -3, 0, 1)).to.equal('')
+        expect(text.TEXTBEFORE('abc', ',', -1, 0, 1)).to.equal('')
+        expect(text.TEXTBEFORE(',a', ',', -2, 0, 1)).to.equal('')
+        expect(text.TEXTBEFORE(',a', ',', -1, 0, 1)).to.equal('')
+        expect(text.TEXTBEFORE('a,b,', ',', -1, 0, 1)).to.equal('a,b')
+      })
+
+      it('with match_end = 1 => it stands for one more delimiter only', () => {
+        expect(text.TEXTBEFORE('a,b', ',', 3, 0, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b,c', ',', -4, 0, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', ',', 2, 0, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b,', ',', 3, 0, 1)).to.equal('a,b,')
+        expect(text.TEXTBEFORE('a,b,', ',', 4, 0, 1)).to.eql(error.na)
+      })
+
+      it('with match_end = 0 => the end of the text is not a delimiter', () => {
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 0)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b,c', ',', -3, 0, 0)).to.eql(error.na)
+      })
+
+      it('with a boolean, a numeric text or a decimal match_end => converted then truncated', () => {
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, true)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, '1')).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 1.5)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 0.9)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, false)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, null)).to.eql(error.na)
+      })
+    })
+
+    describe('should handle if_not_found.', () => {
+      it('with the delimiter not found => returns if_not_found as text', () => {
+        expect(text.TEXTBEFORE('abc', ',', undefined, undefined, undefined, 'nf')).to.equal('nf')
+        expect(text.TEXTBEFORE('abc', ',', undefined, undefined, undefined, '')).to.equal('')
+        expect(text.TEXTBEFORE('abc', ',', undefined, undefined, undefined, 0)).to.equal('0')
+        expect(text.TEXTBEFORE('abc', ',', undefined, undefined, undefined, null)).to.equal('')
+        expect(text.TEXTBEFORE('', ',', undefined, undefined, undefined, 'nf')).to.equal('nf')
+        expect(text.TEXTBEFORE('abc', ',', 3, 0, 0, 'nf')).to.equal('nf')
+      })
+
+      it('with the delimiter found => ignores if_not_found', () => {
+        expect(text.TEXTBEFORE('a,b', ',', undefined, undefined, undefined, 'nf')).to.equal('a')
+        expect(text.TEXTBEFORE('a,b', ',', undefined, undefined, undefined, error.div0)).to.equal('a')
+      })
+
+      it('with an omitted if_not_found => #N/A', () => {
+        expect(text.TEXTBEFORE('abc', ',', undefined, undefined, undefined, undefined)).to.eql(error.na)
+      })
+
+      it('with an error as if_not_found => returns it when the delimiter is not found', () => {
+        expect(text.TEXTBEFORE('abc', ',', undefined, undefined, undefined, error.div0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('abc', ',', 1, 0, 0, error.na)).to.eql(error.na)
+      })
+    })
+
+    describe('should handle an empty delimiter.', () => {
+      it('with a positive instance_num => the delimiter matches at the start of the text', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', '')).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', 2)).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', 3)).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', 4)).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', 5)).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', 100)).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', 1e10)).to.equal('')
+      })
+
+      it('with a negative instance_num => the delimiter matches at the end of the text', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', '', -1)).to.equal('apple,banana,cherry')
+        expect(text.TEXTBEFORE('abc', '', -2)).to.equal('abc')
+        expect(text.TEXTBEFORE('abc', '', -4)).to.equal('abc')
+        expect(text.TEXTBEFORE('abc', '', -100)).to.equal('abc')
+      })
+
+      it('with match_end = 1', () => {
+        expect(text.TEXTBEFORE('abc', '', 1, 0, 1)).to.equal('')
+        expect(text.TEXTBEFORE('abc', '', -1, 0, 1)).to.equal('abc')
+      })
+
+      it('with an empty cell as delimiter', () => {
+        expect(text.TEXTBEFORE('a,b', null)).to.equal('')
+      })
+
+      it('with an empty text', () => {
+        expect(text.TEXTBEFORE('', '')).to.equal('')
+        expect(text.TEXTBEFORE('', '', -1)).to.equal('')
+        expect(text.TEXTBEFORE('', '', 2)).to.equal('')
+        expect(text.TEXTBEFORE(null, null)).to.equal('')
+      })
+    })
+
+    describe('should handle an empty text.', () => {
+      it('with a delimiter => not found', () => {
+        expect(text.TEXTBEFORE('', ',')).to.eql(error.na)
+        expect(text.TEXTBEFORE(null, ',')).to.eql(error.na)
+        expect(text.TEXTBEFORE('', ',', undefined, undefined, undefined, 'nf')).to.equal('nf')
+        expect(text.TEXTBEFORE('', ',', undefined, undefined, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('', ',', undefined, undefined, 1, 'nf')).to.equal('nf')
+        expect(text.TEXTBEFORE('', ',', undefined, 1)).to.eql(error.na)
+      })
+    })
+
+    describe('should handle several delimiters.', () => {
+      it('with an array of delimiters => the first match of any delimiter is used', () => {
+        expect(text.TEXTBEFORE('a,b;c', [[',', ';']])).to.equal('a')
+        expect(text.TEXTBEFORE('a,b;c', [[',', ';']], 2)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b;c', [[',', ';']], -1)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b;c', [[';', ',']])).to.equal('a')
+        expect(text.TEXTBEFORE('abc', [[',', ';']])).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', [[',']], 2, 0, 1)).to.equal('a,b')
+        expect(text.TEXTBEFORE('a,b;c', [[','], [';']])).to.equal('a')
+        expect(text.TEXTBEFORE('abcbcd', [['b', 'bc']], 2)).to.equal('abc')
+        expect(text.TEXTBEFORE('abcbcd', [['b', 'bc']], -2)).to.equal('a')
+      })
+
+      it('with an array of delimiters => the longest one wins when several match at the same position', () => {
+        expect(text.TEXTBEFORE('abcd', [['bc', 'b']])).to.equal('a')
+        expect(text.TEXTBEFORE('abcd', [['b', 'bc']])).to.equal('a')
+        expect(text.TEXTBEFORE('aBCd', [['b', 'bc']], 1, 1)).to.equal('a')
+        expect(text.TEXTBEFORE('abcd', [['b', 'bc']], -1)).to.equal('a')
+        expect(text.TEXTBEFORE('abcd', [['cd', 'd']], -1)).to.equal('abc')
+        expect(text.TEXTBEFORE('abcd', [['bc', 'cd']], -1)).to.equal('ab')
+        expect(text.TEXTBEFORE('abcd', [['c', 'bc']], -1)).to.equal('ab')
+        expect(text.TEXTBEFORE('a,b', [['', ',']])).to.equal('')
+      })
+
+      it('with an array of delimiters and match_mode = 1', () => {
+        expect(text.TEXTBEFORE('aXbYc', [['x', 'y']], 2, 1)).to.equal('aXb')
+      })
+
+      it('with an array of delimiters => the shortest one sets the maximum instance_num', () => {
+        expect(text.TEXTBEFORE('abc', [['abcd', 'x']], 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', [['x', 'yy']], 3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', [['x', 'yy']], 4)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', [[',', ';']], 4)).to.eql(error.value)
+      })
+    })
+
+    describe('throws error', () => {
+      it('#N/A when the delimiter is not found', () => {
+        expect(text.TEXTBEFORE('apple', ',')).to.eql(error.na)
+        expect(text.TEXTBEFORE('axb', '*')).to.eql(error.na)
+        expect(text.TEXTBEFORE('a' + String.fromCodePoint(160) + 'b', ' ')).to.eql(error.na)
+      })
+
+      it('#N/A when instance_num exceeds the number of occurrences', () => {
+        expect(text.TEXTBEFORE('apple,banana', ',', 5)).to.eql(error.na)
+        expect(text.TEXTBEFORE('apple,banana,cherry', 'banana', 2)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b,c', ',', -3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', -3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', ',', 3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', ',', -3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', 3)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 0)).to.eql(error.na)
+      })
+
+      it('#N/A when the delimiter is longer than the text and instance_num is omitted', () => {
+        expect(text.TEXTBEFORE('abc', 'abcd')).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', 'abcd', undefined, undefined, 1)).to.eql(error.na)
+        expect(text.TEXTBEFORE('abc', 'abcd', undefined, 1)).to.eql(error.na)
+      })
+
+      it('#VALUE! when instance_num is 0 or rounds down to 0', () => {
+        expect(text.TEXTBEFORE('apple,banana,cherry', ',', 0)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', 0.5)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', '', 0)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', 0.99999)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num is not a number', () => {
+        expect(text.TEXTBEFORE('a,b,c', ',', 'x')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', null)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', '')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', false)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num exceeds the length of the text', () => {
+        expect(text.TEXTBEFORE('a,b', ',', 4)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', -4)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', 1e10)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', ',', 4)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', ',', -4)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', ',', 4, 0, 1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('😀', ',', 3)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 4.1)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num is given and the delimiter is longer than the text', () => {
+        expect(text.TEXTBEFORE('abc', 'abcd', 1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', 'abcd', -1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', 'abcd', 1, 0, 0, 'nf')).to.eql(error.value)
+        expect(text.TEXTBEFORE('ab', 'abc', 1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', 'abd', 2)).to.eql(error.value)
+        expect(text.TEXTBEFORE('ab', 'xyz', 2)).to.eql(error.value)
+        expect(text.TEXTBEFORE('ab', 'xyz', 3)).to.eql(error.value)
+      })
+
+      it('#VALUE! when instance_num is given and the text is empty', () => {
+        expect(text.TEXTBEFORE('', ',', 1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', 2)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', -1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', 0)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', 1, 0, 0)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', -1, 0, 1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', 1, 0, 1, 'nf')).to.eql(error.value)
+      })
+
+      it('#VALUE! when match_mode is not 0 or 1', () => {
+        expect(text.TEXTBEFORE('a,b,c', ',', 1, 2)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', 1, -1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', 1, 'x')).to.eql(error.value)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, 2.5)).to.eql(error.value)
+        expect(text.TEXTBEFORE('Ab', 'B', 1, '')).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', '', 1, 5)).to.eql(error.value)
+      })
+
+      it('#VALUE! when match_end is not 0 or 1', () => {
+        expect(text.TEXTBEFORE('a,b,c', ',', 1, 0, 2)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b,c', ',', 1, 0, -1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 'x')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, 2.5)).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, '')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 2, 0, -1)).to.eql(error.value)
+        expect(text.TEXTBEFORE('abc', '', 1, 0, 5)).to.eql(error.value)
+      })
+
+      it('#VALUE! when an argument is invalid, even if if_not_found is given', () => {
+        expect(text.TEXTBEFORE('a,b', ',', 5, undefined, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 0, undefined, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 1, 2, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 1, 0, 2, 'nf')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', -5, undefined, undefined, 'nf')).to.eql(error.value)
+        expect(text.TEXTBEFORE('a,b', ',', 0, 0, 0, error.div0)).to.eql(error.value)
+      })
+
+      it('#VALUE! when the text is empty and match_mode is invalid', () => {
+        expect(text.TEXTBEFORE('', ',', 1, 5)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', '', 1, 5)).to.eql(error.value)
+        expect(text.TEXTBEFORE('', ',', undefined, 5)).to.eql(error.value)
+      })
+
+      it('the error of the first invalid argument when text is an error', () => {
+        expect(text.TEXTBEFORE(error.div0, ',')).to.eql(error.div0)
+        expect(text.TEXTBEFORE(error.div0, ',', 0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE(error.na, ',', 0)).to.eql(error.na)
+        expect(text.TEXTBEFORE(error.div0, ',', 1, 5)).to.eql(error.div0)
+        expect(text.TEXTBEFORE(error.value, ',')).to.eql(error.value)
+        expect(text.TEXTBEFORE(error.na, ',', undefined, undefined, undefined, 'nf')).to.eql(error.na)
+      })
+
+      it('the error of the first invalid argument when another argument is an error', () => {
+        expect(text.TEXTBEFORE('a,b', error.div0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', ',', error.div0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', ',', 1, error.div0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', ',', 1, 0, error.div0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', error.na, undefined, undefined, undefined, 'nf')).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', error.div0, 5)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', ',', 9, 0, error.div0)).to.eql(error.div0)
+      })
+
+      it('the error of the first invalid argument when several arguments are errors => the first one wins', () => {
+        expect(text.TEXTBEFORE(error.div0, error.na)).to.eql(error.div0)
+        expect(text.TEXTBEFORE(error.na, ',', error.div0)).to.eql(error.na)
+        expect(text.TEXTBEFORE('a,b', ',', 0, error.div0)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', ',', 1, error.div0, error.na)).to.eql(error.div0)
+        expect(text.TEXTBEFORE('a,b', error.div0, error.na)).to.eql(error.div0)
+      })
+    })
+  })
+})
